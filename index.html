@@ -161,6 +161,13 @@
             transform: translateY(0);
         }
 
+        /* Compact button variant */
+        .btn-compact {
+            padding: 8px 16px;
+            font-size: 14px;
+            width: auto;
+        }
+
         /* Yellow accent bar */
         .btn-primary::after {
             content: '';
@@ -514,7 +521,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 32px;
+            margin-bottom: 15px;
+            padding-top: 15px;
         }
 
         .page-title {
@@ -983,6 +991,60 @@
             border-color: var(--accent);
         }
 
+        .filter-label {
+            padding: 6px 8px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 600;
+            user-select: none;
+            border-radius: 4px;
+            transition: all 0.2s;
+            display: block;
+        }
+
+        .filter-label:hover {
+            background: #fffbeb;
+        }
+
+        .filter-dropdown {
+            display: none;
+            position: absolute;
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 10000;
+            min-width: 150px;
+            padding: 8px;
+        }
+
+        .filter-dropdown.show {
+            display: block;
+        }
+
+        .filter-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            cursor: pointer;
+            font-size: 13px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .filter-option:hover {
+            background: var(--bg-light);
+        }
+
+        .filter-option input[type="checkbox"] {
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+            accent-color: var(--accent);
+        }
+
         .absence-legend {
             display: flex;
             flex-wrap: wrap;
@@ -1032,6 +1094,30 @@
             text-align: left;
             padding-left: 12px;
             min-width: 140px;
+            position: sticky;
+            left: 0;
+            z-index: 11;
+            background: var(--bg-light);
+        }
+
+        .calendar-matrix th:nth-child(2) {
+            position: sticky;
+            left: 140px;
+            z-index: 11;
+            background: var(--bg-light);
+        }
+
+        .calendar-matrix th:nth-child(3) {
+            position: sticky;
+            left: 200px;
+            z-index: 11;
+            background: var(--bg-light);
+        }
+
+        .calendar-matrix th.today-header {
+            background: white;
+            color: var(--primary);
+            font-weight: 700;
         }
 
         .calendar-matrix td {
@@ -1050,6 +1136,24 @@
             left: 0;
             z-index: 5;
             font-size: 12px;
+        }
+
+        .calendar-matrix td:nth-child(2) {
+            font-size: 11px;
+            font-weight: 500;
+            background: var(--bg-light);
+            position: sticky;
+            left: 140px;
+            z-index: 5;
+        }
+
+        .calendar-matrix td:nth-child(3) {
+            font-size: 11px;
+            font-weight: 500;
+            background: var(--bg-light);
+            position: sticky;
+            left: 200px;
+            z-index: 5;
         }
 
         .calendar-day-cell {
@@ -1071,7 +1175,7 @@
         }
 
         .calendar-day-cell.today {
-            border: 2px solid var(--accent);
+            /* No special styling for cell */
         }
 
         .absence-badge {
@@ -1330,14 +1434,13 @@
                 <div class="page-header">
                     <div>
                         <h1 class="page-title">Kalender & Abwesenheiten</h1>
-                        <p class="page-subtitle">Ferien, Krankheit und andere Abwesenheiten verwalten</p>
                     </div>
                     <div style="display: flex; gap: 12px;">
-                        <button class="btn btn-secondary" onclick="kalenderHeute()">
+                        <button class="btn btn-secondary btn-compact" onclick="kalenderHeute()">
                             Heute
                         </button>
-                        <button class="btn btn-primary" id="btnAddAbwesenheit" onclick="openAbwesenheitDialog()" style="display: none;">
-                            <span style="font-size: 18px; margin-right: 4px;">+</span>
+                        <button class="btn btn-primary btn-compact" id="btnAddAbwesenheit" onclick="openAbwesenheitDialog()" style="display: none;">
+                            <span style="font-size: 16px; margin-right: 4px;">+</span>
                             Neue Abwesenheit
                         </button>
                     </div>
@@ -1358,13 +1461,22 @@
                     <div class="legend-item"><span class="legend-color" style="background: #FECACA;"></span> KR - Krankheit</div>
                     <div class="legend-item"><span class="legend-color" style="background: #FED7AA;"></span> UF - Unfall</div>
                     <div class="legend-item"><span class="legend-color" style="background: #E9D5FF;"></span> FT - Feiertag</div>
-                    <div class="legend-item"><span class="legend-color" style="background: #D1FAE5;"></span> ARB - Arbeit (überschreibt)</div>
                 </div>
 
                 <!-- Calendar Matrix -->
-                <div class="data-card">
+                <div class="data-card" style="position: relative;">
                     <div id="kalenderMatrixContainer" style="overflow-x: auto;">
                         <!-- Will be loaded dynamically -->
+                    </div>
+                    
+                    <!-- Filter Dropdowns (outside table, will be positioned absolutely) -->
+                    <div id="filterDropdownContainer">
+                        <div id="funktionFilter" class="filter-dropdown">
+                            <!-- Will be populated dynamically -->
+                        </div>
+                        <div id="filialeFilter" class="filter-dropdown">
+                            <!-- Will be populated dynamically -->
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1701,6 +1813,9 @@
         // KALENDER & ABWESENHEITEN
         // ============================================
         let currentKalenderMonth = new Date();
+        let selectedFunktionen = ['EC', 'MA', 'DP', 'TKB', 'FL', 'VW', 'BO']; // All selected by default
+        let selectedFilialen = ['AG', 'BO', 'GL', 'GR', 'SG', 'VW', 'ZH', 'ZS']; // All selected by default
+        let openDropdownId = null; // Track which dropdown is open
         let allAbwesenheiten = [];
 
         async function loadKalender() {
@@ -1753,6 +1868,100 @@
             renderKalenderMatrix();
         }
 
+        function filterKalender() {
+            renderKalenderMatrix();
+        }
+
+        function positionAndShowDropdown(dropdownId) {
+            const dropdown = document.getElementById(dropdownId);
+            if (!dropdown) return;
+            
+            // Find the header element
+            const headerId = dropdownId === 'funktionFilter' ? 'funktionHeader' : 'filialeHeader';
+            const header = document.getElementById(headerId);
+            if (!header) return;
+            
+            // Get positions
+            const headerRect = header.getBoundingClientRect();
+            const container = header.closest('.data-card');
+            const containerRect = container.getBoundingClientRect();
+            
+            // Position dropdown below header, relative to container
+            dropdown.style.top = (headerRect.bottom - containerRect.top + 4) + 'px';
+            dropdown.style.left = (headerRect.left - containerRect.left) + 'px';
+            dropdown.classList.add('show');
+        }
+
+        function toggleFilterDropdown(id, event) {
+            if (openDropdownId === id) {
+                // Clicking same header - close it
+                openDropdownId = null;
+                document.querySelectorAll('.filter-dropdown').forEach(d => d.classList.remove('show'));
+            } else {
+                // Opening new dropdown
+                openDropdownId = id;
+                
+                // Close all others
+                document.querySelectorAll('.filter-dropdown').forEach(d => {
+                    if (d.id !== id) {
+                        d.classList.remove('show');
+                    }
+                });
+                
+                // Position and show this one
+                positionAndShowDropdown(id);
+            }
+        }
+
+        function updateFunktionFilter() {
+            // Update global state from checkboxes
+            selectedFunktionen = Array.from(document.querySelectorAll('.funktion-checkbox:checked')).map(cb => cb.value);
+            filterKalender();
+            // Don't close dropdown - keep it open for more selections
+        }
+
+        function updateFilialeFilter() {
+            // Update global state from checkboxes
+            selectedFilialen = Array.from(document.querySelectorAll('.filiale-checkbox:checked')).map(cb => cb.value);
+            filterKalender();
+            // Don't close dropdown - keep it open for more selections
+        }
+
+        function toggleAllFunktion(checkbox) {
+            if (checkbox.checked) {
+                // Activate all
+                selectedFunktionen = ['EC', 'MA', 'DP', 'TKB', 'FL', 'VW', 'BO'];
+            } else {
+                // Deactivate all
+                selectedFunktionen = [];
+            }
+            filterKalender();
+            // Don't close dropdown - keep it open
+        }
+
+        function toggleAllFiliale(checkbox) {
+            if (checkbox.checked) {
+                // Activate all
+                selectedFilialen = ['AG', 'BO', 'GL', 'GR', 'SG', 'VW', 'ZH', 'ZS'];
+            } else {
+                // Deactivate all
+                selectedFilialen = [];
+            }
+            filterKalender();
+            // Don't close dropdown - keep it open
+        }
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', function(event) {
+            const clickedInsideFilter = event.target.closest('.filter-label') || 
+                                        event.target.closest('.filter-dropdown');
+            
+            if (!clickedInsideFilter) {
+                openDropdownId = null;
+                document.querySelectorAll('.filter-dropdown').forEach(d => d.classList.remove('show'));
+            }
+        });
+
         function renderKalenderMatrix() {
             const container = document.getElementById('kalenderMatrixContainer');
             
@@ -1787,33 +1996,84 @@
                 });
             }
 
-            // Filter active employees
-            const activeEmployees = allMitarbeiter.filter(m => m.aktiv).sort((a, b) => a.nachname.localeCompare(b.nachname));
+            // Filter active employees using stored filter state
+            let filteredEmployees = allMitarbeiter.filter(m => m.aktiv);
+            
+            // Apply Funktion filter - if empty array, show nothing
+            if (selectedFunktionen.length === 0) {
+                filteredEmployees = []; // No selections = no employees
+            } else {
+                filteredEmployees = filteredEmployees.filter(m => selectedFunktionen.includes(m.funktion));
+            }
+            
+            // Apply Filiale filter - if empty array, show nothing
+            if (selectedFilialen.length === 0) {
+                filteredEmployees = []; // No selections = no employees
+            } else if (filteredEmployees.length > 0) {
+                filteredEmployees = filteredEmployees.filter(m => selectedFilialen.includes(m.filiale));
+            }
+            
+            // Sort by name
+            const activeEmployees = filteredEmployees.sort((a, b) => a.nachname.localeCompare(b.nachname));
 
             if (activeEmployees.length === 0) {
-                container.innerHTML = '<div class="empty-state"><p>Keine Mitarbeiter vorhanden</p></div>';
+                // Still show header with filters even when no employees
+                html += '</tr></thead><tbody>';
+                html += '<tr><td colspan="100%" style="padding: 40px; text-align: center; color: var(--text-gray);">Keine Mitarbeiter mit den gewählten Filtern gefunden</td></tr>';
+                html += '</tbody></table>';
+                container.innerHTML = html;
                 return;
             }
 
             // Build matrix
             let html = '<table class="calendar-matrix"><thead><tr>';
             html += '<th>Mitarbeiter</th>';
+            html += `<th style="min-width: 90px;" id="funktionHeader">
+                <div class="filter-label" onclick="toggleFilterDropdown('funktionFilter', event)">Funktion ▼</div>
+            </th>`;
+            html += `<th style="min-width: 90px;" id="filialeHeader">
+                <div class="filter-label" onclick="toggleFilterDropdown('filialeFilter', event)">Filiale ▼</div>
+            </th>`;
             days.forEach(d => {
-                html += `<th style="min-width: 30px;">${d.dayName}<br><small>${d.day}</small></th>`;
+                const todayClass = d.isToday ? ' class="today-header"' : '';
+                html += `<th${todayClass} style="min-width: 30px;">${d.dayName}<br><small>${d.day}</small></th>`;
             });
             html += '</tr></thead><tbody>';
 
             // Rows for each employee
             activeEmployees.forEach(emp => {
-                html += `<tr><td>${emp.vorname} ${emp.nachname}</td>`;
+                html += `<tr>`;
+                html += `<td>${emp.vorname} ${emp.nachname}</td>`;
+                html += `<td style="text-align: center; background: var(--bg-light);">${emp.funktion || '-'}</td>`;
+                html += `<td style="text-align: center; background: var(--bg-light);">${emp.filiale || '-'}</td>`;
                 
                 days.forEach(d => {
-                    // Find absence for this employee on this date
-                    const absence = allAbwesenheiten.find(a => 
+                    // Find ALL absences for this employee on this date
+                    const absences = allAbwesenheiten.filter(a => 
                         parseInt(a.mitarbeiter_id) === emp.id &&
                         d.date >= a.von &&
                         d.date <= a.bis
                     );
+
+                    // Priority logic
+                    let absence = null;
+                    if (absences.length > 0) {
+                        // Check for ARB first - it makes employee available
+                        const arbEntry = absences.find(a => a.typ === 'ARB');
+                        if (arbEntry) {
+                            absence = null; // ARB overrides - show as available
+                        } else {
+                            // Priority order: FT > BF > UF > KR > FE > KO
+                            const priorityOrder = ['FT', 'BF', 'UF', 'KR', 'FE', 'KO'];
+                            for (const typ of priorityOrder) {
+                                const found = absences.find(a => a.typ === typ);
+                                if (found) {
+                                    absence = found;
+                                    break;
+                                }
+                            }
+                        }
+                    }
 
                     let cellClass = 'calendar-day-cell';
                     if (d.isWeekend) cellClass += ' weekend';
@@ -1833,6 +2093,71 @@
 
             html += '</tbody></table>';
             container.innerHTML = html;
+            
+            // Populate dropdown containers (outside table)
+            const funktionDropdown = document.getElementById('funktionFilter');
+            funktionDropdown.innerHTML = `
+                <label class="filter-option">
+                    <input type="checkbox" id="allesFunktionCheckbox" value="all" onchange="toggleAllFunktion(this)" ${selectedFunktionen.length === 7 ? 'checked' : ''}> Alle
+                </label>
+                <label class="filter-option">
+                    <input type="checkbox" class="funktion-checkbox" value="EC" onchange="updateFunktionFilter()" ${selectedFunktionen.includes('EC') ? 'checked' : ''}> EC
+                </label>
+                <label class="filter-option">
+                    <input type="checkbox" class="funktion-checkbox" value="MA" onchange="updateFunktionFilter()" ${selectedFunktionen.includes('MA') ? 'checked' : ''}> MA
+                </label>
+                <label class="filter-option">
+                    <input type="checkbox" class="funktion-checkbox" value="DP" onchange="updateFunktionFilter()" ${selectedFunktionen.includes('DP') ? 'checked' : ''}> DP
+                </label>
+                <label class="filter-option">
+                    <input type="checkbox" class="funktion-checkbox" value="TKB" onchange="updateFunktionFilter()" ${selectedFunktionen.includes('TKB') ? 'checked' : ''}> TKB
+                </label>
+                <label class="filter-option">
+                    <input type="checkbox" class="funktion-checkbox" value="FL" onchange="updateFunktionFilter()" ${selectedFunktionen.includes('FL') ? 'checked' : ''}> FL
+                </label>
+                <label class="filter-option">
+                    <input type="checkbox" class="funktion-checkbox" value="VW" onchange="updateFunktionFilter()" ${selectedFunktionen.includes('VW') ? 'checked' : ''}> VW
+                </label>
+                <label class="filter-option">
+                    <input type="checkbox" class="funktion-checkbox" value="BO" onchange="updateFunktionFilter()" ${selectedFunktionen.includes('BO') ? 'checked' : ''}> BO
+                </label>
+            `;
+            
+            const filialeDropdown = document.getElementById('filialeFilter');
+            filialeDropdown.innerHTML = `
+                <label class="filter-option">
+                    <input type="checkbox" id="allesFilialeCheckbox" value="all" onchange="toggleAllFiliale(this)" ${selectedFilialen.length === 8 ? 'checked' : ''}> Alle
+                </label>
+                <label class="filter-option">
+                    <input type="checkbox" class="filiale-checkbox" value="AG" onchange="updateFilialeFilter()" ${selectedFilialen.includes('AG') ? 'checked' : ''}> AG
+                </label>
+                <label class="filter-option">
+                    <input type="checkbox" class="filiale-checkbox" value="BO" onchange="updateFilialeFilter()" ${selectedFilialen.includes('BO') ? 'checked' : ''}> BO
+                </label>
+                <label class="filter-option">
+                    <input type="checkbox" class="filiale-checkbox" value="GL" onchange="updateFilialeFilter()" ${selectedFilialen.includes('GL') ? 'checked' : ''}> GL
+                </label>
+                <label class="filter-option">
+                    <input type="checkbox" class="filiale-checkbox" value="GR" onchange="updateFilialeFilter()" ${selectedFilialen.includes('GR') ? 'checked' : ''}> GR
+                </label>
+                <label class="filter-option">
+                    <input type="checkbox" class="filiale-checkbox" value="SG" onchange="updateFilialeFilter()" ${selectedFilialen.includes('SG') ? 'checked' : ''}> SG
+                </label>
+                <label class="filter-option">
+                    <input type="checkbox" class="filiale-checkbox" value="VW" onchange="updateFilialeFilter()" ${selectedFilialen.includes('VW') ? 'checked' : ''}> VW
+                </label>
+                <label class="filter-option">
+                    <input type="checkbox" class="filiale-checkbox" value="ZH" onchange="updateFilialeFilter()" ${selectedFilialen.includes('ZH') ? 'checked' : ''}> ZH
+                </label>
+                <label class="filter-option">
+                    <input type="checkbox" class="filiale-checkbox" value="ZS" onchange="updateFilialeFilter()" ${selectedFilialen.includes('ZS') ? 'checked' : ''}> ZS
+                </label>
+            `;
+            
+            // Re-open and position dropdown if it was open
+            if (openDropdownId) {
+                positionAndShowDropdown(openDropdownId);
+            }
         }
 
         function openAbwesenheitDialog(mitarbeiterId = null, date = null) {
@@ -1845,6 +2170,12 @@
             document.getElementById('abwesenheitForm').reset();
             document.getElementById('editAbwesenheitId').value = '';
             document.getElementById('btnDeleteAbwesenheit').style.display = 'none';
+
+            // Re-enable all form fields
+            document.getElementById('inputAbwMitarbeiter').disabled = false;
+            document.getElementById('inputAbwTyp').disabled = false;
+            document.getElementById('inputAbwVon').disabled = false;
+            document.getElementById('inputAbwBis').disabled = false;
 
             // Load employee dropdown
             const select = document.getElementById('inputAbwMitarbeiter');
@@ -1878,17 +2209,41 @@
                 return;
             }
 
-            // Find absence period containing this date
-            const absence = allAbwesenheiten.find(a => 
+            // Find ALL absences for this employee on this date (priority logic)
+            const absences = allAbwesenheiten.filter(a => 
                 parseInt(a.mitarbeiter_id) === mitarbeiterId &&
                 date >= a.von &&
                 date <= a.bis
             );
 
+            if (absences.length === 0) return;
+
+            // Apply priority to get the displayed absence
+            let absence = null;
+            const arbEntry = absences.find(a => a.typ === 'ARB');
+            if (arbEntry) {
+                absence = arbEntry;
+            } else {
+                const priorityOrder = ['FT', 'BF', 'UF', 'KR', 'FE', 'KO'];
+                for (const typ of priorityOrder) {
+                    const found = absences.find(a => a.typ === typ);
+                    if (found) {
+                        absence = found;
+                        break;
+                    }
+                }
+            }
+
             if (!absence) return;
 
+            // Check if BF or FT - make read-only
+            const isProtected = absence.typ === 'BF' || absence.typ === 'FT';
+
+            // Store the clicked date for deletion
+            document.getElementById('clickedDate').value = date;
+
             // Load into dialog
-            document.getElementById('abwesenheitDialogTitle').textContent = 'Abwesenheit bearbeiten';
+            document.getElementById('abwesenheitDialogTitle').textContent = isProtected ? 'Abwesenheit (nur lesen)' : 'Abwesenheit bearbeiten';
             document.getElementById('editAbwesenheitId').value = absence.id;
             document.getElementById('inputAbwMitarbeiter').value = absence.mitarbeiter_id;
             document.getElementById('inputAbwTyp').value = absence.typ;
@@ -1896,7 +2251,15 @@
             document.getElementById('inputAbwBis').value = absence.bis;
             calculateAbwTage();
 
-            document.getElementById('btnDeleteAbwesenheit').style.display = 'block';
+            // Hide delete button for BF and FT, show for others
+            document.getElementById('btnDeleteAbwesenheit').style.display = isProtected ? 'none' : 'block';
+
+            // For non-protected types, allow editing dates to specify what to delete
+            // But keep mitarbeiter and typ readonly (can't change those)
+            document.getElementById('inputAbwMitarbeiter').disabled = true;
+            document.getElementById('inputAbwTyp').disabled = true;
+            document.getElementById('inputAbwVon').disabled = isProtected;
+            document.getElementById('inputAbwBis').disabled = isProtected;
 
             // Load employee dropdown
             const select = document.getElementById('inputAbwMitarbeiter');
@@ -1942,12 +2305,41 @@
                 const diffTime = Math.abs(end - start);
                 const tage = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 
+                // Weekend logic for FE and KO
+                let finalVon = von;
+                let finalBis = bis;
+                
+                if (typ === 'FE' || typ === 'KO') {
+                    const startDay = start.getDay(); // 0=Sunday, 1=Monday, ..., 5=Friday
+                    const endDay = end.getDay();
+
+                    // If starts on Monday (1), include previous weekend
+                    if (startDay === 1) {
+                        const prevSaturday = new Date(start);
+                        prevSaturday.setDate(start.getDate() - 2);
+                        finalVon = prevSaturday.toISOString().split('T')[0];
+                    }
+
+                    // If ends on Friday (5), include following weekend
+                    if (endDay === 5) {
+                        const nextSunday = new Date(end);
+                        nextSunday.setDate(end.getDate() + 2);
+                        finalBis = nextSunday.toISOString().split('T')[0];
+                    }
+                }
+
+                // Recalculate days with extended dates
+                const finalStart = new Date(finalVon);
+                const finalEnd = new Date(finalBis);
+                const finalDiffTime = Math.abs(finalEnd - finalStart);
+                const finalTage = Math.ceil(finalDiffTime / (1000 * 60 * 60 * 24)) + 1;
+
                 const abwData = {
                     mitarbeiter_id: mitarbeiterId,
                     typ,
-                    von,
-                    bis,
-                    tage,
+                    von: finalVon,
+                    bis: finalBis,
+                    tage: finalTage,
                     erfasst_am: new Date().toISOString()
                 };
 
@@ -1984,19 +2376,123 @@
             const id = document.getElementById('editAbwesenheitId').value;
             if (!id) return;
 
-            if (!confirm('Abwesenheit wirklich löschen?')) {
+            // Get the current absence
+            const currentAbsence = allAbwesenheiten.find(a => a.id === parseInt(id));
+            if (!currentAbsence) return;
+
+            // Check if BF or FT - prevent deletion
+            if (currentAbsence.typ === 'BF' || currentAbsence.typ === 'FT') {
+                alert('⛔ Betriebsferien und Feiertage können nicht gelöscht werden!');
+                return;
+            }
+
+            // Get the dates from the dialog (user might have changed them)
+            const deleteVon = document.getElementById('inputAbwVon').value;
+            const deleteBis = document.getElementById('inputAbwBis').value;
+            const originalVon = currentAbsence.von;
+            const originalBis = currentAbsence.bis;
+
+            if (!confirm(`Möchten Sie die Abwesenheit vom ${deleteVon} bis ${deleteBis} löschen?`)) {
                 return;
             }
 
             try {
-                const { error } = await supabaseClient
-                    .from('abwesenheits_perioden')
-                    .delete()
-                    .eq('id', parseInt(id));
+                // Case 1: Delete range matches entire period - delete completely
+                if (deleteVon === originalVon && deleteBis === originalBis) {
+                    await supabaseClient
+                        .from('abwesenheits_perioden')
+                        .delete()
+                        .eq('id', parseInt(id));
+                }
+                // Case 2: Delete from beginning - keep end part
+                else if (deleteVon === originalVon && deleteBis < originalBis) {
+                    const newVon = new Date(deleteBis);
+                    newVon.setDate(newVon.getDate() + 1);
+                    const newVonStr = newVon.toISOString().split('T')[0];
+                    
+                    const start = new Date(newVonStr);
+                    const end = new Date(originalBis);
+                    const diffTime = Math.abs(end - start);
+                    const newTage = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                    
+                    await supabaseClient
+                        .from('abwesenheits_perioden')
+                        .update({ 
+                            von: newVonStr,
+                            tage: newTage
+                        })
+                        .eq('id', parseInt(id));
+                }
+                // Case 3: Delete from end - keep beginning part
+                else if (deleteVon > originalVon && deleteBis === originalBis) {
+                    const newBis = new Date(deleteVon);
+                    newBis.setDate(newBis.getDate() - 1);
+                    const newBisStr = newBis.toISOString().split('T')[0];
+                    
+                    const start = new Date(originalVon);
+                    const end = new Date(newBisStr);
+                    const diffTime = Math.abs(end - start);
+                    const newTage = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                    
+                    await supabaseClient
+                        .from('abwesenheits_perioden')
+                        .update({ 
+                            bis: newBisStr,
+                            tage: newTage
+                        })
+                        .eq('id', parseInt(id));
+                }
+                // Case 4: Delete from middle - split into two periods
+                else if (deleteVon > originalVon && deleteBis < originalBis) {
+                    const dayBeforeDelete = new Date(deleteVon);
+                    dayBeforeDelete.setDate(dayBeforeDelete.getDate() - 1);
+                    const dayBeforeStr = dayBeforeDelete.toISOString().split('T')[0];
+                    
+                    const dayAfterDelete = new Date(deleteBis);
+                    dayAfterDelete.setDate(dayAfterDelete.getDate() + 1);
+                    const dayAfterStr = dayAfterDelete.toISOString().split('T')[0];
+                    
+                    // Calculate days for first period
+                    const start1 = new Date(originalVon);
+                    const end1 = new Date(dayBeforeStr);
+                    const diffTime1 = Math.abs(end1 - start1);
+                    const tage1 = Math.ceil(diffTime1 / (1000 * 60 * 60 * 24)) + 1;
+                    
+                    // Calculate days for second period
+                    const start2 = new Date(dayAfterStr);
+                    const end2 = new Date(originalBis);
+                    const diffTime2 = Math.abs(end2 - start2);
+                    const tage2 = Math.ceil(diffTime2 / (1000 * 60 * 60 * 24)) + 1;
+                    
+                    // Update existing period to end before delete range
+                    await supabaseClient
+                        .from('abwesenheits_perioden')
+                        .update({ 
+                            bis: dayBeforeStr,
+                            tage: tage1
+                        })
+                        .eq('id', parseInt(id));
+                    
+                    // Create new period starting after delete range
+                    const newPeriod = {
+                        id: Date.now(),
+                        mitarbeiter_id: currentAbsence.mitarbeiter_id,
+                        typ: currentAbsence.typ,
+                        von: dayAfterStr,
+                        bis: originalBis,
+                        tage: tage2,
+                        erfasst_am: new Date().toISOString()
+                    };
+                    
+                    await supabaseClient
+                        .from('abwesenheits_perioden')
+                        .insert([newPeriod]);
+                } else {
+                    alert('⚠️ Ungültiger Löschbereich. Bitte passen Sie die Daten an.');
+                    return;
+                }
 
-                if (error) throw error;
-
-                console.log('✅ Abwesenheit deleted');
+                console.log('✅ Abwesenheit gelöscht/angepasst');
                 closeAbwesenheitDialog();
                 await loadKalender();
 
@@ -3193,6 +3689,7 @@
                     </div>
 
                     <input type="hidden" id="editAbwesenheitId">
+                    <input type="hidden" id="clickedDate">
 
                     <div class="modal-actions">
                         <button type="button" class="btn btn-secondary" onclick="closeAbwesenheitDialog()">

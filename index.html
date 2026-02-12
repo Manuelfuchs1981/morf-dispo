@@ -244,7 +244,7 @@
         /* Header Navigation */
         .header-nav {
             display: flex;
-            gap: 8px;
+            gap: 0;
             flex: 1;
             justify-content: center;
             margin: 0 48px;
@@ -253,17 +253,27 @@
         .header-nav-item {
             display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 10px 20px;
-            background: rgba(255, 255, 255, 0.1);
+            justify-content: center;
+            padding: 14px 28px;
+            background: rgba(255, 255, 255, 0.08);
             border: none;
-            border-radius: 8px;
+            border-radius: 0;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
             cursor: pointer;
             transition: all 0.2s;
             font-size: 14px;
             font-weight: 500;
             color: rgba(255, 255, 255, 0.9);
             white-space: nowrap;
+        }
+
+        .header-nav-item:first-child {
+            border-radius: 8px 0 0 8px;
+        }
+
+        .header-nav-item:last-child {
+            border-radius: 0 8px 8px 0;
+            border-right: none;
         }
 
         .header-nav-item:hover {
@@ -275,16 +285,14 @@
             background: white;
             color: #334155;
             font-weight: 600;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         .header-nav-icon {
-            font-size: 16px;
-            opacity: 0.9;
+            display: none;
         }
 
         .header-nav-item.active .header-nav-icon {
-            opacity: 1;
+            display: none;
         }
 
         .header-logo {
@@ -293,7 +301,11 @@
         }
 
         .header-triangle {
-            display: none;
+            width: 0;
+            height: 0;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-bottom: 15px solid var(--accent);
         }
 
         .header-title {

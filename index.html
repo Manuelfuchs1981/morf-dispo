@@ -1366,7 +1366,17 @@
         // Initialize Supabase
         document.addEventListener('DOMContentLoaded', () => {
             if (window.supabase) {
-                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+                    auth: {
+                        persistSession: false
+                    },
+                    global: {
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        }
+                    }
+                });
                 console.log('✅ MORF Disposition Pro - Supabase connected');
             } else {
                 showError('Fehler beim Laden der Anwendung. Bitte Seite neu laden.');

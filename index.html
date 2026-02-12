@@ -234,6 +234,47 @@
             display: flex;
             align-items: center;
             gap: 16px;
+            flex-shrink: 0;
+        }
+
+        /* Header Navigation */
+        .header-nav {
+            display: flex;
+            gap: 4px;
+            flex: 1;
+            justify-content: center;
+            margin: 0 24px;
+        }
+
+        .header-nav-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-dark);
+            white-space: nowrap;
+        }
+
+        .header-nav-item:hover {
+            background: var(--bg-light);
+            color: var(--primary);
+        }
+
+        .header-nav-item.active {
+            background: var(--accent);
+            color: white;
+            font-weight: 600;
+        }
+
+        .header-nav-icon {
+            font-size: 16px;
         }
 
         .header-logo {
@@ -1097,6 +1138,31 @@
                     <div class="header-triangle"></div>
                     <div class="header-title">MORF Disposition Pro</div>
                 </div>
+                
+                <!-- Navigation in Header -->
+                <div class="header-nav">
+                    <button class="header-nav-item active" onclick="showView('dashboard')">
+                        <span class="header-nav-icon">📊</span>
+                        <span>Dashboard</span>
+                    </button>
+                    <button class="header-nav-item" onclick="showView('personal')" data-permission="canViewPersonal">
+                        <span class="header-nav-icon">👥</span>
+                        <span>Personal</span>
+                    </button>
+                    <button class="header-nav-item" onclick="showView('kalender')" data-permission="canViewCalendar">
+                        <span class="header-nav-icon">📅</span>
+                        <span>Kalender</span>
+                    </button>
+                    <button class="header-nav-item" onclick="showView('auftraege')" data-permission="canViewAuftraege">
+                        <span class="header-nav-icon">📋</span>
+                        <span>Aufträge</span>
+                    </button>
+                    <button class="header-nav-item" onclick="showView('tagesprogramm')" data-permission="canViewTagesprogramm">
+                        <span class="header-nav-icon">🗓️</span>
+                        <span>Tagesprogramm</span>
+                    </button>
+                </div>
+                
                 <div class="header-right">
                     <div class="user-avatar" onclick="toggleUserMenu()" id="userAvatar">
                         MF
@@ -1131,30 +1197,6 @@
         </header>
 
         <div class="app-content">
-            <!-- Navigation -->
-            <div class="nav-container">
-                <button class="nav-item active" onclick="showView('dashboard')">
-                    <span class="nav-icon">📊</span>
-                    <span>Dashboard</span>
-                </button>
-                <button class="nav-item" onclick="showView('personal')" data-permission="canViewPersonal">
-                    <span class="nav-icon">👥</span>
-                    <span>Personal</span>
-                </button>
-                <button class="nav-item" onclick="showView('kalender')" data-permission="canViewCalendar">
-                    <span class="nav-icon">📅</span>
-                    <span>Kalender</span>
-                </button>
-                <button class="nav-item" onclick="showView('auftraege')" data-permission="canViewAuftraege">
-                    <span class="nav-icon">📋</span>
-                    <span>Aufträge</span>
-                </button>
-                <button class="nav-item" onclick="showView('tagesprogramm')" data-permission="canViewTagesprogramm">
-                    <span class="nav-icon">🗓️</span>
-                    <span>Tagesprogramm</span>
-                </button>
-            </div>
-
             <!-- Dashboard View -->
             <div id="dashboardView" class="content-view active">
                 <div class="page-header">
@@ -1612,7 +1654,7 @@
             });
 
             // Hide all nav items
-            document.querySelectorAll('.nav-item').forEach(n => {
+            document.querySelectorAll('.header-nav-item').forEach(n => {
                 n.classList.remove('active');
             });
 
@@ -1620,7 +1662,7 @@
             document.getElementById(viewName + 'View').classList.add('active');
             
             // Mark nav item as active
-            event.target.closest('.nav-item').classList.add('active');
+            event.target.closest('.header-nav-item').classList.add('active');
 
             // Load data for view
             if (viewName === 'personal') {
@@ -1947,7 +1989,7 @@
 
         function updateNavigationVisibility() {
             // Hide navigation items based on permissions
-            const navItems = document.querySelectorAll('.nav-item[data-permission]');
+            const navItems = document.querySelectorAll('.header-nav-item[data-permission]');
             
             navItems.forEach(item => {
                 const permission = item.getAttribute('data-permission');

@@ -1,0 +1,3260 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MORF Disposition Pro</title>
+    
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Bcrypt for password hashing -->
+    <script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js"></script>
+    
+    <!-- Google Fonts - Roboto -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            /* MORF CI Colors */
+            --morf-dark: #2d3748;
+            --morf-yellow: #fbbf24;
+            --bg-light: #f8f9fa;
+            --white: #ffffff;
+            --text-dark: #1f2937;
+            --text-gray: #6b7280;
+            --border: #e5e7eb;
+            
+            /* Semantic Colors */
+            --primary: var(--morf-dark);
+            --accent: var(--morf-yellow);
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        body {
+            font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
+            background: var(--bg-light);
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+
+        /* Login Screen */
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--morf-dark) 0%, #1a202c 100%);
+            padding: 20px;
+        }
+
+        .login-box {
+            background: var(--white);
+            padding: 48px;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 440px;
+            position: relative;
+        }
+
+        /* MORF Logo Triangle Accent */
+        .login-box::before {
+            content: '';
+            position: absolute;
+            top: -1px;
+            left: 40px;
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-top: 30px solid var(--accent);
+            transform: translateY(-100%);
+        }
+
+        .logo-container {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .logo {
+            max-width: 200px;
+            height: auto;
+        }
+
+        .app-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-top: 16px;
+            letter-spacing: -0.5px;
+        }
+
+        .app-subtitle {
+            font-size: 14px;
+            color: var(--text-gray);
+            margin-top: 4px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-dark);
+            margin-bottom: 8px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 15px;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1a202c;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(45, 55, 72, 0.3);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        /* Yellow accent bar */
+        .btn-primary::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: var(--accent);
+        }
+
+        .error-message {
+            background: #fee;
+            color: var(--danger);
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        /* Loading State */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            margin: 0 auto;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Main App (hidden initially) */
+        #mainApp {
+            display: none;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .app-header {
+            background: var(--white);
+            border-bottom: 1px solid var(--border);
+            padding: 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .header-content {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 16px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header-logo {
+            height: 32px;
+            width: auto;
+        }
+
+        .header-triangle {
+            width: 0;
+            height: 0;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-bottom: 15px solid var(--accent);
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            position: relative;
+        }
+
+        /* User Avatar */
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--morf-dark) 0%, #1a202c 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .user-avatar:hover {
+            border-color: var(--accent);
+            transform: scale(1.05);
+        }
+
+        .user-avatar::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            right: -2px;
+            width: 12px;
+            height: 12px;
+            background: var(--accent);
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+
+        /* Dropdown Menu */
+        .user-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 12px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            min-width: 280px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.2s;
+            z-index: 1000;
+        }
+
+        .user-dropdown.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .dropdown-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .dropdown-user-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 4px;
+        }
+
+        .dropdown-user-role {
+            font-size: 13px;
+            color: var(--text-gray);
+            display: inline-block;
+            padding: 4px 12px;
+            background: var(--bg-light);
+            border-radius: 12px;
+        }
+
+        .dropdown-menu {
+            padding: 8px;
+        }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            color: var(--text-dark);
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .dropdown-item:hover {
+            background: var(--bg-light);
+        }
+
+        .dropdown-item.danger {
+            color: var(--danger);
+        }
+
+        .dropdown-item.danger:hover {
+            background: #fee;
+        }
+
+        .dropdown-icon {
+            font-size: 18px;
+            width: 20px;
+            text-align: center;
+        }
+
+        /* Content Area */
+        .app-content {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 32px;
+        }
+
+        /* Navigation */
+        .nav-container {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 32px;
+            background: var(--white);
+            padding: 8px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-item {
+            flex: 1;
+            padding: 12px 20px;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-gray);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .nav-item:hover {
+            background: var(--bg-light);
+            color: var(--text-dark);
+        }
+
+        .nav-item.active {
+            background: var(--primary);
+            color: white;
+            position: relative;
+        }
+
+        .nav-item.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 20%;
+            right: 20%;
+            height: 3px;
+            background: var(--accent);
+        }
+
+        .nav-icon {
+            font-size: 20px;
+        }
+
+        /* Content Views */
+        .content-view {
+            display: none;
+        }
+
+        .content-view.active {
+            display: block;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+        }
+
+        .page-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--primary);
+            margin: 0;
+        }
+
+        .page-subtitle {
+            font-size: 16px;
+            color: var(--text-gray);
+            margin: 4px 0 0 0;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .stat-content {
+            flex: 1;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--primary);
+            line-height: 1;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: var(--text-gray);
+            margin-top: 4px;
+        }
+
+        /* Welcome Card */
+        .welcome-card {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 48px;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .welcome-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 24px;
+            background: linear-gradient(135deg, var(--morf-dark) 0%, #1a202c 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .welcome-icon::after {
+            content: '';
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-bottom: 25px solid var(--accent);
+        }
+
+        .welcome-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 12px;
+        }
+
+        .welcome-text {
+            font-size: 16px;
+            color: var(--text-gray);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Coming Soon */
+        .coming-soon {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 80px 40px;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .coming-soon h3 {
+            color: var(--text-gray);
+            font-weight: 500;
+        }
+
+        /* Filter Bar */
+        .filter-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 300px;
+            display: flex;
+            align-items: center;
+            background: var(--white);
+            padding: 0 16px;
+            border-radius: 8px;
+            border: 2px solid var(--border);
+            transition: all 0.2s;
+        }
+
+        .search-box:focus-within {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1);
+        }
+
+        .search-box input {
+            flex: 1;
+            border: none;
+            outline: none;
+            padding: 12px 0;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .filter-select {
+            padding: 12px 16px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: var(--white);
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1);
+        }
+
+        .btn-filter-reset {
+            padding: 12px 20px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            background: var(--white);
+            color: var(--text-gray);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-filter-reset:hover {
+            border-color: var(--text-gray);
+            color: var(--text-dark);
+        }
+
+        /* Data Card */
+        .data-card {
+            background: var(--white);
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+        }
+
+        /* Table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table thead {
+            background: var(--bg-light);
+        }
+
+        .data-table th {
+            padding: 16px;
+            text-align: left;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-gray);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .data-table td {
+            padding: 16px;
+            border-top: 1px solid var(--border);
+            font-size: 14px;
+        }
+
+        .data-table tr:hover {
+            background: var(--bg-light);
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .badge-ec {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge-ma {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-vw {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-zh {
+            background: #e0e7ff;
+            color: #3730a3;
+        }
+
+        /* Action Buttons */
+        .btn-icon {
+            width: 32px;
+            height: 32px;
+            border: none;
+            border-radius: 6px;
+            background: transparent;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            font-size: 16px;
+        }
+
+        .btn-icon:hover {
+            background: var(--bg-light);
+        }
+
+        .btn-icon.danger:hover {
+            background: #fee;
+            color: var(--danger);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-gray);
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        /* Admin Panel */
+        .role-card {
+            background: var(--white);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            transition: all 0.2s;
+        }
+
+        .role-card:hover {
+            border-color: var(--accent);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .role-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .role-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .role-badge-large {
+            padding: 6px 16px;
+            border-radius: 16px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .permissions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+        }
+
+        .permission-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: var(--bg-light);
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .permission-item:hover {
+            background: #e5e7eb;
+        }
+
+        .permission-checkbox {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: var(--accent);
+        }
+
+        .permission-label {
+            flex: 1;
+            font-size: 14px;
+            color: var(--text-dark);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .permission-icon {
+            font-size: 18px;
+        }
+
+        .save-indicator {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: var(--success);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            font-size: 14px;
+            font-weight: 500;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s;
+            z-index: 10000;
+        }
+
+        .save-indicator.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Stellvertreter Checkboxes */
+        .stv-checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .stv-checkbox-item:hover {
+            border-color: var(--accent);
+            background: #fffbeb;
+        }
+
+        .stv-checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--accent);
+        }
+
+        .stv-checkbox-label {
+            flex: 1;
+            font-size: 14px;
+            color: var(--text-dark);
+            cursor: pointer;
+        }
+
+        .stv-role-badge {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+
+        /* Calendar Styles */
+        .calendar-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding: 16px 24px;
+            background: var(--white);
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .calendar-month-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+            margin: 0;
+        }
+
+        .btn-calendar-nav {
+            padding: 10px 20px;
+            background: var(--bg-light);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-calendar-nav:hover {
+            background: var(--border);
+            border-color: var(--accent);
+        }
+
+        .absence-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 24px;
+            padding: 16px;
+            background: var(--white);
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-dark);
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        /* Calendar Matrix */
+        .calendar-matrix {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+
+        .calendar-matrix th {
+            background: var(--bg-light);
+            padding: 6px 4px;
+            text-align: center;
+            font-weight: 600;
+            border: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            font-size: 10px;
+        }
+
+        .calendar-matrix th:first-child {
+            text-align: left;
+            padding-left: 12px;
+            min-width: 140px;
+        }
+
+        .calendar-matrix td {
+            padding: 0;
+            border: 1px solid var(--border);
+            text-align: center;
+            height: 28px;
+        }
+
+        .calendar-matrix td:first-child {
+            text-align: left;
+            padding-left: 12px;
+            font-weight: 500;
+            background: var(--bg-light);
+            position: sticky;
+            left: 0;
+            z-index: 5;
+            font-size: 12px;
+        }
+
+        .calendar-day-cell {
+            cursor: pointer;
+            transition: all 0.2s;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .calendar-day-cell:hover {
+            background: rgba(251, 191, 36, 0.1);
+        }
+
+        .calendar-day-cell.weekend {
+            background: #f9fafb;
+        }
+
+        .calendar-day-cell.today {
+            border: 2px solid var(--accent);
+        }
+
+        .absence-badge {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 10px;
+        }
+
+        .absence-fe { background: #DBEAFE; color: #1e40af; } /* Hellblau */
+        .absence-ko { background: #DCFCE7; color: #166534; } /* Hellgrün */
+        .absence-bf { background: #FEF3C7; color: #92400e; } /* Hellgelb */
+        .absence-kr { background: #FECACA; color: #991b1b; } /* Hellrot */
+        .absence-uf { background: #FED7AA; color: #9a3412; } /* Hellorange */
+        .absence-ft { background: #E9D5FF; color: #6b21a8; } /* Helllila */
+        .absence-arb { background: #D1FAE5; color: #065f46; } /* Hellgrün (dunkel) */
+
+        /* Utilities */
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-container">
+        <div class="login-box">
+            <div class="logo-container">
+                <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==" 
+                     alt="MORF Logo" 
+                     class="logo"
+                     style="display: none;">
+                <div class="app-title">MORF Disposition</div>
+                <div class="app-subtitle">Professional Edition</div>
+            </div>
+
+            <div id="errorMessage" class="error-message"></div>
+
+            <form id="loginForm" onsubmit="handleLogin(event); return false;">
+                <div class="form-group">
+                    <label for="username">Benutzername</label>
+                    <input 
+                        type="text" 
+                        id="username" 
+                        name="username" 
+                        required 
+                        autocomplete="username"
+                        placeholder="Ihr Benutzername">
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Passwort</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        required 
+                        autocomplete="current-password"
+                        placeholder="Ihr Passwort">
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    Anmelden
+                </button>
+            </form>
+
+            <div id="loginLoading" class="loading">
+                <div class="spinner"></div>
+                <p style="margin-top: 16px; color: var(--text-gray);">Anmeldung läuft...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="mainApp">
+        <header class="app-header">
+            <div class="header-content">
+                <div class="header-left">
+                    <div class="header-triangle"></div>
+                    <div class="header-title">MORF Disposition Pro</div>
+                </div>
+                <div class="header-right">
+                    <div class="user-avatar" onclick="toggleUserMenu()" id="userAvatar">
+                        MF
+                    </div>
+                    <div class="user-dropdown" id="userDropdown">
+                        <div class="dropdown-header">
+                            <div class="dropdown-user-name" id="dropdownUserName">Manuel Fuchs</div>
+                            <div class="dropdown-user-role" id="dropdownUserRole">AD - Administrator</div>
+                        </div>
+                        <div class="dropdown-menu">
+                            <button class="dropdown-item" onclick="openSettings()">
+                                <span class="dropdown-icon">⚙️</span>
+                                <span>Kontoeinstellungen</span>
+                            </button>
+                            <button class="dropdown-item" onclick="openPasswordChange()">
+                                <span class="dropdown-icon">🔒</span>
+                                <span>Passwort ändern</span>
+                            </button>
+                            <button class="dropdown-item" id="menuBerechtigungen" onclick="openBerechtigungen()" style="display: none;">
+                                <span class="dropdown-icon">👥</span>
+                                <span>Berechtigungen</span>
+                            </button>
+                            <div style="height: 8px;"></div>
+                            <button class="dropdown-item danger" onclick="logout()">
+                                <span class="dropdown-icon">🚪</span>
+                                <span>Abmelden</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="app-content">
+            <!-- Navigation -->
+            <div class="nav-container">
+                <button class="nav-item active" onclick="showView('dashboard')">
+                    <span class="nav-icon">📊</span>
+                    <span>Dashboard</span>
+                </button>
+                <button class="nav-item" onclick="showView('personal')" data-permission="canViewPersonal">
+                    <span class="nav-icon">👥</span>
+                    <span>Personal</span>
+                </button>
+                <button class="nav-item" onclick="showView('kalender')" data-permission="canViewCalendar">
+                    <span class="nav-icon">📅</span>
+                    <span>Kalender</span>
+                </button>
+                <button class="nav-item" onclick="showView('auftraege')" data-permission="canViewAuftraege">
+                    <span class="nav-icon">📋</span>
+                    <span>Aufträge</span>
+                </button>
+                <button class="nav-item" onclick="showView('tagesprogramm')" data-permission="canViewTagesprogramm">
+                    <span class="nav-icon">🗓️</span>
+                    <span>Tagesprogramm</span>
+                </button>
+            </div>
+
+            <!-- Dashboard View -->
+            <div id="dashboardView" class="content-view active">
+                <div class="page-header">
+                    <h1 class="page-title">Dashboard</h1>
+                    <p class="page-subtitle">Übersicht über Ihr Dispositionssystem</p>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">
+                            <span style="font-size: 24px;">👥</span>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="statMitarbeiter">0</div>
+                            <div class="stat-label">Mitarbeiter</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                            <span style="font-size: 24px;">📋</span>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="statAuftraege">0</div>
+                            <div class="stat-label">Offene Aufträge</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                            <span style="font-size: 24px;">📅</span>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="statAbwesenheiten">0</div>
+                            <div class="stat-label">Abwesenheiten</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, var(--morf-dark) 0%, #1a202c 100%);">
+                            <span style="font-size: 24px;">⚡</span>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value" style="color: var(--accent);">LIVE</div>
+                            <div class="stat-label">Multi-User Aktiv</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Welcome Card -->
+                <div class="welcome-card">
+                    <div class="welcome-icon"></div>
+                    <h2 class="welcome-title">Willkommen zurück! 👋</h2>
+                    <p class="welcome-text">
+                        Das neue MORF Disposition Pro System ist bereit für den Multi-User Betrieb.
+                        Alle Daten werden in Echtzeit synchronisiert.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Personal View -->
+            <div id="personalView" class="content-view">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Personal</h1>
+                        <p class="page-subtitle">Verwaltung Ihrer Mitarbeiter</p>
+                    </div>
+                    <button class="btn btn-primary" id="btnAddMitarbeiter" onclick="openAddMitarbeiterDialog()" style="display: none;">
+                        <span style="font-size: 18px; margin-right: 4px;">+</span>
+                        Neuer Mitarbeiter
+                    </button>
+                </div>
+
+                <!-- Filters -->
+                <div class="filter-bar">
+                    <div class="search-box">
+                        <span style="color: var(--text-gray); margin-right: 8px;">🔍</span>
+                        <input 
+                            type="text" 
+                            id="searchMitarbeiter" 
+                            placeholder="Suche nach Name oder Personal-ID..."
+                            oninput="filterMitarbeiter()">
+                    </div>
+                    
+                    <select id="filterFunktion" onchange="filterMitarbeiter()" class="filter-select">
+                        <option value="">Alle Funktionen</option>
+                        <option value="EC">EC - Equipenchef</option>
+                        <option value="MA">MA - Mitarbeiter</option>
+                        <option value="VW">VW - Verwaltung</option>
+                    </select>
+
+                    <select id="filterFiliale" onchange="filterMitarbeiter()" class="filter-select">
+                        <option value="">Alle Filialen</option>
+                        <option value="ZH">Zürich</option>
+                        <option value="VW">Verwaltung</option>
+                    </select>
+
+                    <button class="btn-filter-reset" onclick="resetFilters()">
+                        Zurücksetzen
+                    </button>
+                </div>
+
+                <!-- Mitarbeiter Table -->
+                <div class="data-card">
+                    <div id="mitarbeiterTableContainer"></div>
+                </div>
+            </div>
+
+            <!-- Kalender View -->
+            <div id="kalenderView" class="content-view">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Kalender & Abwesenheiten</h1>
+                        <p class="page-subtitle">Ferien, Krankheit und andere Abwesenheiten verwalten</p>
+                    </div>
+                    <div style="display: flex; gap: 12px;">
+                        <button class="btn btn-secondary" onclick="kalenderHeute()">
+                            Heute
+                        </button>
+                        <button class="btn btn-primary" id="btnAddAbwesenheit" onclick="openAbwesenheitDialog()" style="display: none;">
+                            <span style="font-size: 18px; margin-right: 4px;">+</span>
+                            Neue Abwesenheit
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Calendar Navigation -->
+                <div class="calendar-nav">
+                    <button class="btn-calendar-nav" onclick="kalenderPrevMonth()">‹ Vorheriger Monat</button>
+                    <h2 id="kalenderMonthTitle" class="calendar-month-title">Februar 2026</h2>
+                    <button class="btn-calendar-nav" onclick="kalenderNextMonth()">Nächster Monat ›</button>
+                </div>
+
+                <!-- Legend -->
+                <div class="absence-legend">
+                    <div class="legend-item"><span class="legend-color" style="background: #DBEAFE;"></span> FE - Ferien</div>
+                    <div class="legend-item"><span class="legend-color" style="background: #DCFCE7;"></span> KO - Kompensation</div>
+                    <div class="legend-item"><span class="legend-color" style="background: #FEF3C7;"></span> BF - Betriebsferien</div>
+                    <div class="legend-item"><span class="legend-color" style="background: #FECACA;"></span> KR - Krankheit</div>
+                    <div class="legend-item"><span class="legend-color" style="background: #FED7AA;"></span> UF - Unfall</div>
+                    <div class="legend-item"><span class="legend-color" style="background: #E9D5FF;"></span> FT - Feiertag</div>
+                    <div class="legend-item"><span class="legend-color" style="background: #D1FAE5;"></span> ARB - Arbeit (überschreibt)</div>
+                </div>
+
+                <!-- Calendar Matrix -->
+                <div class="data-card">
+                    <div id="kalenderMatrixContainer" style="overflow-x: auto;">
+                        <!-- Will be loaded dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <div id="auftraegeView" class="content-view">
+                <div class="page-header">
+                    <h1 class="page-title">Aufträge</h1>
+                </div>
+                <div class="coming-soon">
+                    <div style="font-size: 64px; margin-bottom: 16px;">📋</div>
+                    <h3>Wird gebaut...</h3>
+                </div>
+            </div>
+
+            <div id="tagesprogrammView" class="content-view">
+                <div class="page-header">
+                    <h1 class="page-title">Tagesprogramm</h1>
+                </div>
+                <div class="coming-soon">
+                    <div style="font-size: 64px; margin-bottom: 16px;">🗓️</div>
+                    <h3>Wird gebaut...</h3>
+                </div>
+            </div>
+
+            <!-- Admin View -->
+            <div id="adminView" class="content-view">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Administration</h1>
+                        <p class="page-subtitle">Rollen & Berechtigungen verwalten</p>
+                    </div>
+                </div>
+
+                <div class="data-card">
+                    <div style="padding: 24px;">
+                        <h3 style="margin: 0 0 8px 0; color: var(--primary);">Rollenberechtigungen</h3>
+                        <p style="color: var(--text-gray); font-size: 14px; margin: 0 0 24px 0;">
+                            Definieren Sie welche Rolle welche Bereiche sehen und bearbeiten darf.
+                            <strong>Änderungen werden sofort wirksam.</strong>
+                        </p>
+
+                        <div id="rolesPermissionsContainer">
+                            <!-- Will be loaded dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // SUPABASE CONFIGURATION
+        // ============================================
+        const SUPABASE_URL = 'https://vszwoyykoxpsbbjcsxbj.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_lFujU57HDKGHOTh3zVrabA_uxurhbav';
+        let supabaseClient = null;
+        let currentUser = null;
+
+        // Initialize Supabase
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.supabase) {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                console.log('✅ MORF Disposition Pro - Supabase connected');
+            } else {
+                showError('Fehler beim Laden der Anwendung. Bitte Seite neu laden.');
+            }
+
+            // Check for existing session
+            checkSession();
+        });
+
+        // ============================================
+        // LOGIN SYSTEM
+        // ============================================
+        async function handleLogin(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+
+            // Hide error
+            document.getElementById('errorMessage').classList.remove('show');
+            
+            // Show loading
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('loginLoading').style.display = 'block';
+
+            try {
+                // Query user from database
+                const { data, error } = await supabaseClient
+                    .from('system_users')
+                    .select('*')
+                    .eq('username', username)
+                    .eq('password', password)
+                    .eq('active', true)
+                    .single();
+
+                if (error || !data) {
+                    throw new Error('Ungültige Anmeldedaten');
+                }
+
+                // Get permissions
+                const { data: permData } = await supabaseClient
+                    .from('role_permissions')
+                    .select('permissions')
+                    .eq('role', data.role)
+                    .single();
+
+                // Check if user is stellvertreter
+                let isStellvertreter = false;
+                if (data.role !== 'admin') {
+                    const { data: stvData } = await supabaseClient
+                        .from('admin_stellvertreter')
+                        .select('id')
+                        .eq('stellvertreter_user_id', data.id)
+                        .single();
+                    
+                    isStellvertreter = !!stvData;
+                }
+
+                // Set current user
+                currentUser = {
+                    id: data.id,
+                    username: data.username,
+                    name: data.name,
+                    role: data.role,
+                    permissions: permData?.permissions || {},
+                    isStellvertreter: isStellvertreter
+                };
+
+                // Save session
+                sessionStorage.setItem('morfUser', JSON.stringify(currentUser));
+
+                console.log('✅ Login successful:', currentUser.name, isStellvertreter ? '(Stellvertreter)' : '');
+
+                // Show main app
+                showMainApp();
+
+            } catch (error) {
+                console.error('Login error:', error);
+                showError(error.message || 'Anmeldung fehlgeschlagen');
+                
+                // Reset form
+                document.getElementById('loginForm').style.display = 'block';
+                document.getElementById('loginLoading').style.display = 'none';
+                document.getElementById('password').value = '';
+            }
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('errorMessage');
+            errorEl.textContent = message;
+            errorEl.classList.add('show');
+        }
+
+        function showMainApp() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+
+            // Update user info
+            const initials = getInitials(currentUser.name);
+            document.getElementById('userAvatar').textContent = initials;
+            document.getElementById('dropdownUserName').textContent = currentUser.name;
+            
+            let roleDisplay = getRoleDisplayName(currentUser.role);
+            if (currentUser.isStellvertreter) {
+                roleDisplay += ' (Admin-Stellvertreter)';
+            }
+            document.getElementById('dropdownUserRole').textContent = roleDisplay;
+
+            // Show Berechtigungen menu item for admins and stellvertreter
+            if (isAdmin()) {
+                document.getElementById('menuBerechtigungen').style.display = 'flex';
+            }
+
+            // Update navigation based on permissions
+            updateNavigationVisibility();
+
+            // Load dashboard data
+            loadDashboardData();
+        }
+
+        function getInitials(name) {
+            const parts = name.split(' ');
+            if (parts.length >= 2) {
+                return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+            }
+            return name.substring(0, 2).toUpperCase();
+        }
+
+        function toggleUserMenu() {
+            const dropdown = document.getElementById('userDropdown');
+            dropdown.classList.toggle('show');
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            const avatar = document.getElementById('userAvatar');
+            const dropdown = document.getElementById('userDropdown');
+            
+            if (avatar && dropdown && !avatar.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.classList.remove('show');
+            }
+        });
+
+        function openSettings() {
+            alert('Kontoeinstellungen - wird noch gebaut! 🚧');
+            document.getElementById('userDropdown').classList.remove('show');
+        }
+
+        function openPasswordChange() {
+            alert('Passwort ändern - wird noch gebaut! 🚧');
+            document.getElementById('userDropdown').classList.remove('show');
+        }
+
+        function getRoleDisplayName(role) {
+            const roles = {
+                'admin': 'AD - Administrator',
+                'disponent': 'D - Disponent',
+                'tkb': 'TKB - Technischer Kundenberater',
+                'geschaeftsleitung': 'GL - Geschäftsleitung'
+            };
+            return roles[role] || role;
+        }
+
+        function getRoleBadgeColor(role) {
+            const colors = {
+                'admin': '#ef4444',           // Rot
+                'disponent': '#3b82f6',       // Blau
+                'tkb': '#10b981',             // Grün
+                'geschaeftsleitung': '#f59e0b' // Orange
+            };
+            return colors[role] || '#6b7280';
+        }
+
+        function logout() {
+            document.getElementById('userDropdown').classList.remove('show');
+            
+            currentUser = null;
+            sessionStorage.removeItem('morfUser');
+            
+            // Hide main app
+            document.getElementById('mainApp').style.display = 'none';
+            
+            // Show login screen
+            document.getElementById('loginScreen').style.display = 'flex';
+            
+            // Reset login form
+            document.getElementById('loginForm').reset();
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('loginLoading').style.display = 'none';
+            document.getElementById('errorMessage').classList.remove('show');
+            
+            console.log('✅ Logged out');
+        }
+
+        function checkSession() {
+            const savedUser = sessionStorage.getItem('morfUser');
+            if (savedUser) {
+                try {
+                    currentUser = JSON.parse(savedUser);
+                    console.log('✅ Session restored:', currentUser.name);
+                    showMainApp();
+                } catch (e) {
+                    sessionStorage.removeItem('morfUser');
+                }
+            }
+        }
+
+        // ============================================
+        // NAVIGATION
+        // ============================================
+        function showView(viewName) {
+            // Check permissions
+            if (viewName === 'personal' && !canViewPersonal()) {
+                alert('⛔ Keine Berechtigung für Personal-Ansicht');
+                return;
+            }
+            if (viewName === 'kalender' && !canViewCalendar()) {
+                alert('⛔ Keine Berechtigung für Kalender-Ansicht');
+                return;
+            }
+            if (viewName === 'auftraege' && !canViewAuftraege()) {
+                alert('⛔ Keine Berechtigung für Auftrags-Ansicht');
+                return;
+            }
+            if (viewName === 'tagesprogramm' && !canViewTagesprogramm()) {
+                alert('⛔ Keine Berechtigung für Tagesprogramm');
+                return;
+            }
+
+            // Hide all views
+            document.querySelectorAll('.content-view').forEach(v => {
+                v.classList.remove('active');
+            });
+
+            // Hide all nav items
+            document.querySelectorAll('.nav-item').forEach(n => {
+                n.classList.remove('active');
+            });
+
+            // Show selected view
+            document.getElementById(viewName + 'View').classList.add('active');
+            
+            // Mark nav item as active
+            event.target.closest('.nav-item').classList.add('active');
+
+            // Load data for view
+            if (viewName === 'personal') {
+                loadMitarbeiter();
+            }
+            if (viewName === 'admin') {
+                loadAdminPanel();
+            }
+            if (viewName === 'kalender') {
+                loadKalender();
+            }
+
+            console.log('📄 Switched to:', viewName);
+        }
+
+        // ============================================
+        // KALENDER & ABWESENHEITEN
+        // ============================================
+        let currentKalenderMonth = new Date();
+        let allAbwesenheiten = [];
+
+        async function loadKalender() {
+            try {
+                // Load mitarbeiter if not loaded yet
+                if (allMitarbeiter.length === 0) {
+                    const { data: mitarbeiterData } = await supabaseClient
+                        .from('mitarbeiter')
+                        .select('*')
+                        .order('nachname');
+                    
+                    allMitarbeiter = mitarbeiterData || [];
+                }
+
+                // Load absences
+                const { data, error } = await supabaseClient
+                    .from('abwesenheits_perioden')
+                    .select('*')
+                    .order('von');
+
+                if (error) throw error;
+
+                allAbwesenheiten = data || [];
+                renderKalenderMatrix();
+
+                // Show add button based on permissions
+                const addBtn = document.getElementById('btnAddAbwesenheit');
+                if (addBtn) {
+                    addBtn.style.display = canEditCalendar() ? 'flex' : 'none';
+                }
+
+                console.log('✅ Kalender loaded:', allAbwesenheiten.length, 'absences,', allMitarbeiter.length, 'mitarbeiter');
+            } catch (error) {
+                console.error('Error loading kalender:', error);
+            }
+        }
+
+        function kalenderHeute() {
+            currentKalenderMonth = new Date();
+            renderKalenderMatrix();
+        }
+
+        function kalenderPrevMonth() {
+            currentKalenderMonth.setMonth(currentKalenderMonth.getMonth() - 1);
+            renderKalenderMatrix();
+        }
+
+        function kalenderNextMonth() {
+            currentKalenderMonth.setMonth(currentKalenderMonth.getMonth() + 1);
+            renderKalenderMatrix();
+        }
+
+        function renderKalenderMatrix() {
+            const container = document.getElementById('kalenderMatrixContainer');
+            
+            // Update month title
+            const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+            document.getElementById('kalenderMonthTitle').textContent = 
+                `${monthNames[currentKalenderMonth.getMonth()]} ${currentKalenderMonth.getFullYear()}`;
+
+            // Get days in month
+            const year = currentKalenderMonth.getFullYear();
+            const month = currentKalenderMonth.getMonth();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            // Build days array
+            const days = [];
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            
+            for (let day = 1; day <= daysInMonth; day++) {
+                const date = new Date(year, month, day);
+                const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                const dayOfWeek = date.getDay();
+                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+                const isToday = dateStr === todayStr;
+                
+                days.push({
+                    day,
+                    date: dateStr,
+                    dayName: ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'][dayOfWeek],
+                    isWeekend,
+                    isToday
+                });
+            }
+
+            // Filter active employees
+            const activeEmployees = allMitarbeiter.filter(m => m.aktiv).sort((a, b) => a.nachname.localeCompare(b.nachname));
+
+            if (activeEmployees.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>Keine Mitarbeiter vorhanden</p></div>';
+                return;
+            }
+
+            // Build matrix
+            let html = '<table class="calendar-matrix"><thead><tr>';
+            html += '<th>Mitarbeiter</th>';
+            days.forEach(d => {
+                html += `<th style="min-width: 30px;">${d.dayName}<br><small>${d.day}</small></th>`;
+            });
+            html += '</tr></thead><tbody>';
+
+            // Rows for each employee
+            activeEmployees.forEach(emp => {
+                html += `<tr><td>${emp.vorname} ${emp.nachname}</td>`;
+                
+                days.forEach(d => {
+                    // Find absence for this employee on this date
+                    const absence = allAbwesenheiten.find(a => 
+                        parseInt(a.mitarbeiter_id) === emp.id &&
+                        d.date >= a.von &&
+                        d.date <= a.bis
+                    );
+
+                    let cellClass = 'calendar-day-cell';
+                    if (d.isWeekend) cellClass += ' weekend';
+                    if (d.isToday) cellClass += ' today';
+
+                    if (absence) {
+                        html += `<td><div class="${cellClass}" onclick="editAbwesenheitFromCell(${emp.id}, '${d.date}')">
+                            <div class="absence-badge absence-${absence.typ.toLowerCase()}">${absence.typ}</div>
+                        </div></td>`;
+                    } else {
+                        html += `<td><div class="${cellClass}" onclick="openAbwesenheitDialog(${emp.id}, '${d.date}')"></div></td>`;
+                    }
+                });
+                
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        function openAbwesenheitDialog(mitarbeiterId = null, date = null) {
+            if (!canEditCalendar()) {
+                alert('⛔ Keine Berechtigung zum Bearbeiten des Kalenders');
+                return;
+            }
+
+            document.getElementById('abwesenheitDialogTitle').textContent = 'Neue Abwesenheit';
+            document.getElementById('abwesenheitForm').reset();
+            document.getElementById('editAbwesenheitId').value = '';
+            document.getElementById('btnDeleteAbwesenheit').style.display = 'none';
+
+            // Load employee dropdown
+            const select = document.getElementById('inputAbwMitarbeiter');
+            select.innerHTML = '<option value="">Bitte wählen...</option>';
+            allMitarbeiter.filter(m => m.aktiv).forEach(m => {
+                const option = document.createElement('option');
+                option.value = m.id;
+                option.textContent = `${m.vorname} ${m.nachname}`;
+                select.appendChild(option);
+            });
+
+            // Pre-fill if provided
+            if (mitarbeiterId) {
+                select.value = mitarbeiterId;
+            }
+            if (date) {
+                document.getElementById('inputAbwVon').value = date;
+                document.getElementById('inputAbwBis').value = date;
+                calculateAbwTage();
+            }
+
+            document.getElementById('abwesenheitDialog').classList.add('show');
+        }
+
+        function closeAbwesenheitDialog() {
+            document.getElementById('abwesenheitDialog').classList.remove('show');
+        }
+
+        async function editAbwesenheitFromCell(mitarbeiterId, date) {
+            if (!canEditCalendar()) {
+                return;
+            }
+
+            // Find absence period containing this date
+            const absence = allAbwesenheiten.find(a => 
+                parseInt(a.mitarbeiter_id) === mitarbeiterId &&
+                date >= a.von &&
+                date <= a.bis
+            );
+
+            if (!absence) return;
+
+            // Load into dialog
+            document.getElementById('abwesenheitDialogTitle').textContent = 'Abwesenheit bearbeiten';
+            document.getElementById('editAbwesenheitId').value = absence.id;
+            document.getElementById('inputAbwMitarbeiter').value = absence.mitarbeiter_id;
+            document.getElementById('inputAbwTyp').value = absence.typ;
+            document.getElementById('inputAbwVon').value = absence.von;
+            document.getElementById('inputAbwBis').value = absence.bis;
+            calculateAbwTage();
+
+            document.getElementById('btnDeleteAbwesenheit').style.display = 'block';
+
+            // Load employee dropdown
+            const select = document.getElementById('inputAbwMitarbeiter');
+            select.innerHTML = '<option value="">Bitte wählen...</option>';
+            allMitarbeiter.filter(m => m.aktiv).forEach(m => {
+                const option = document.createElement('option');
+                option.value = m.id;
+                option.textContent = `${m.vorname} ${m.nachname}`;
+                select.appendChild(option);
+            });
+            select.value = absence.mitarbeiter_id;
+
+            document.getElementById('abwesenheitDialog').classList.add('show');
+        }
+
+        function calculateAbwTage() {
+            const von = document.getElementById('inputAbwVon').value;
+            const bis = document.getElementById('inputAbwBis').value;
+
+            if (von && bis) {
+                const start = new Date(von);
+                const end = new Date(bis);
+                const diffTime = Math.abs(end - start);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                document.getElementById('inputAbwTage').value = `${diffDays} Tag${diffDays > 1 ? 'e' : ''}`;
+            } else {
+                document.getElementById('inputAbwTage').value = '';
+            }
+        }
+
+        async function saveAbwesenheit(event) {
+            event.preventDefault();
+
+            const editId = document.getElementById('editAbwesenheitId').value;
+            const mitarbeiterId = parseInt(document.getElementById('inputAbwMitarbeiter').value);
+            const typ = document.getElementById('inputAbwTyp').value;
+            const von = document.getElementById('inputAbwVon').value;
+            const bis = document.getElementById('inputAbwBis').value;
+
+            try {
+                const start = new Date(von);
+                const end = new Date(bis);
+                const diffTime = Math.abs(end - start);
+                const tage = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+                const abwData = {
+                    mitarbeiter_id: mitarbeiterId,
+                    typ,
+                    von,
+                    bis,
+                    tage,
+                    erfasst_am: new Date().toISOString()
+                };
+
+                if (editId) {
+                    // Update
+                    const { error } = await supabaseClient
+                        .from('abwesenheits_perioden')
+                        .update(abwData)
+                        .eq('id', parseInt(editId));
+
+                    if (error) throw error;
+                    console.log('✅ Abwesenheit updated');
+                } else {
+                    // Insert
+                    abwData.id = Date.now();
+                    const { error } = await supabaseClient
+                        .from('abwesenheits_perioden')
+                        .insert([abwData]);
+
+                    if (error) throw error;
+                    console.log('✅ Abwesenheit created');
+                }
+
+                closeAbwesenheitDialog();
+                await loadKalender();
+
+            } catch (error) {
+                console.error('Error saving abwesenheit:', error);
+                alert('Fehler beim Speichern: ' + error.message);
+            }
+        }
+
+        async function deleteAbwesenheit() {
+            const id = document.getElementById('editAbwesenheitId').value;
+            if (!id) return;
+
+            if (!confirm('Abwesenheit wirklich löschen?')) {
+                return;
+            }
+
+            try {
+                const { error } = await supabaseClient
+                    .from('abwesenheits_perioden')
+                    .delete()
+                    .eq('id', parseInt(id));
+
+                if (error) throw error;
+
+                console.log('✅ Abwesenheit deleted');
+                closeAbwesenheitDialog();
+                await loadKalender();
+
+            } catch (error) {
+                console.error('Error deleting:', error);
+                alert('Fehler beim Löschen: ' + error.message);
+            }
+        }
+
+        function updateNavigationVisibility() {
+            // Hide navigation items based on permissions
+            const navItems = document.querySelectorAll('.nav-item[data-permission]');
+            
+            navItems.forEach(item => {
+                const permission = item.getAttribute('data-permission');
+                if (!hasPermission(permission)) {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+        // ============================================
+        // ADMIN PANEL
+        // ============================================
+        let allRoles = [];
+
+        function openBerechtigungen() {
+            if (!isAdmin()) {
+                alert('⛔ Nur für Administratoren zugänglich');
+                return; // Stop here - don't open modal
+            }
+            
+            document.getElementById('userDropdown').classList.remove('show');
+            loadBerechtigungen();
+            document.getElementById('berechtigungenModal').classList.add('show');
+        }
+
+        function closeBerechtigungen() {
+            document.getElementById('berechtigungenModal').classList.remove('show');
+        }
+
+        async function loadBerechtigungen() {
+            // No need to check again - already checked in openBerechtigungen
+
+            try {
+                const [rolesRes, usersRes, stvRes] = await Promise.all([
+                    supabaseClient.from('role_permissions').select('*').order('id'),
+                    supabaseClient.from('system_users').select('id, name, role, active').eq('active', true),
+                    supabaseClient.from('admin_stellvertreter').select('stellvertreter_user_id')
+                ]);
+
+                if (rolesRes.error) throw rolesRes.error;
+                if (usersRes.error) throw usersRes.error;
+
+                allRoles = rolesRes.data || [];
+                
+                // Show stellvertreter section only for primary admins (not stellvertreter themselves)
+                const stellvertreterSection = document.getElementById('stellvertreterSection');
+                if (currentUser.role === 'admin' && !currentUser.isStellvertreter) {
+                    stellvertreterSection.style.display = 'block';
+                    renderStellvertreter(usersRes.data || [], stvRes.data || []);
+                } else {
+                    stellvertreterSection.style.display = 'none';
+                }
+                
+                // Render roles
+                renderRolesPermissions();
+
+                console.log('✅ Berechtigungen loaded');
+            } catch (error) {
+                console.error('Error loading berechtigungen:', error);
+            }
+        }
+
+        function renderStellvertreter(allUsers, currentStv) {
+            const container = document.getElementById('stellvertreterContainer');
+            
+            // Filter out current admin and other admins
+            const availableUsers = allUsers.filter(u => u.id !== currentUser.id && u.role !== 'admin');
+            
+            // Get current stellvertreter IDs
+            const stvIds = currentStv.map(s => s.stellvertreter_user_id);
+
+            const roleColors = {
+                'disponent': { bg: '#dbeafe', color: '#1e40af' },
+                'tkb': { bg: '#d1fae5', color: '#065f46' },
+                'geschaeftsleitung': { bg: '#fef3c7', color: '#92400e' },
+                'backoffice': { bg: '#ede9fe', color: '#5b21b6' },
+                'equipenchef': { bg: '#cffafe', color: '#164e63' }
+            };
+
+            const html = availableUsers.map(user => {
+                const isStv = stvIds.includes(user.id);
+                const roleInfo = roleColors[user.role] || { bg: '#f3f4f6', color: '#374151' };
+                const roleDisplay = getRoleDisplayName(user.role);
+
+                return `
+                    <label class="stv-checkbox-item">
+                        <input 
+                            type="checkbox" 
+                            ${isStv ? 'checked' : ''}
+                            onchange="toggleStellvertreter(${user.id}, this.checked)"
+                        >
+                        <span class="stv-checkbox-label">${user.name}</span>
+                        <span class="stv-role-badge" style="background: ${roleInfo.bg}; color: ${roleInfo.color};">
+                            ${roleDisplay.split(' - ')[0]}
+                        </span>
+                    </label>
+                `;
+            }).join('');
+
+            container.innerHTML = html || '<p style="color: var(--text-gray); font-size: 14px;">Keine verfügbaren Benutzer</p>';
+        }
+
+        async function toggleStellvertreter(userId, isChecked) {
+            try {
+                if (isChecked) {
+                    // Add stellvertreter
+                    const { error } = await supabaseClient
+                        .from('admin_stellvertreter')
+                        .insert([{
+                            admin_user_id: currentUser.id,
+                            stellvertreter_user_id: userId
+                        }]);
+
+                    if (error) throw error;
+                    console.log('✅ Stellvertreter added:', userId);
+                } else {
+                    // Remove stellvertreter
+                    const { error } = await supabaseClient
+                        .from('admin_stellvertreter')
+                        .delete()
+                        .eq('admin_user_id', currentUser.id)
+                        .eq('stellvertreter_user_id', userId);
+
+                    if (error) throw error;
+                    console.log('✅ Stellvertreter removed:', userId);
+                }
+
+                showSaveIndicator();
+
+            } catch (error) {
+                console.error('Error toggling stellvertreter:', error);
+                alert('Fehler: ' + error.message);
+                // Revert checkbox
+                event.target.checked = !isChecked;
+            }
+        }
+
+        function isAdmin() {
+            if (!currentUser) return false;
+            
+            // Check if user is actual admin
+            if (currentUser.role === 'admin') return true;
+            
+            // Check if user is stellvertreter (will be checked at login)
+            if (currentUser.isStellvertreter) return true;
+            
+            return false;
+        }
+
+        async function loadAdminPanel() {
+            // Deprecated - now using modal
+            openBerechtigungen();
+        }
+
+        function renderRolesPermissions() {
+            const container = document.getElementById('rolesPermissionsModalContainer');
+
+            const roleInfo = {
+                'admin': { name: 'AD - Administrator', color: '#ef4444', desc: 'Volle Systemrechte' },
+                'disponent': { name: 'D - Disponent', color: '#3b82f6', desc: 'Disposition und Planung' },
+                'tkb': { name: 'TKB - Technischer Kundenberater', color: '#10b981', desc: 'Technische Beratung' },
+                'geschaeftsleitung': { name: 'GL - Geschäftsleitung', color: '#f59e0b', desc: 'Übersicht und Reports' },
+                'backoffice': { name: 'BO - Backoffice', color: '#8b5cf6', desc: 'Büro und Verwaltung' },
+                'equipenchef': { name: 'EC - Equipenchef', color: '#06b6d4', desc: 'Mobile Tagesprogramm-Ansicht' }
+            };
+
+            const permissionLabels = {
+                'canViewPersonal': { label: 'Personal ansehen', icon: '👥' },
+                'canEditPersonal': { label: 'Personal bearbeiten', icon: '✏️' },
+                'canDeletePersonal': { label: 'Personal löschen', icon: '🗑️' },
+                'canViewCalendar': { label: 'Kalender ansehen', icon: '📅' },
+                'canEditCalendar': { label: 'Kalender bearbeiten', icon: '✏️' },
+                'canViewAuftraege': { label: 'Aufträge ansehen', icon: '📋' },
+                'canCreateAuftraege': { label: 'Aufträge erstellen', icon: '➕' },
+                'canEditAuftraege': { label: 'Aufträge bearbeiten', icon: '✏️' },
+                'canDeleteAuftraege': { label: 'Aufträge löschen', icon: '🗑️' },
+                'canViewTagesprogramm': { label: 'Tagesprogramm ansehen', icon: '🗓️' },
+                'canEditEquipe': { label: 'Equipe zuteilen', icon: '👷' },
+                'canPrint': { label: 'Drucken', icon: '🖨️' },
+                'canExportImport': { label: 'Export/Import', icon: '📤' },
+                'canViewSettings': { label: 'Einstellungen', icon: '⚙️' }
+            };
+
+            const html = allRoles.map(role => {
+                const info = roleInfo[role.role] || { name: role.role, color: '#6b7280', desc: '' };
+                const permissions = role.permissions || {};
+
+                return `
+                    <div class="role-card">
+                        <div class="role-header">
+                            <div>
+                                <div class="role-title">${info.name}</div>
+                                <div style="color: var(--text-gray); font-size: 13px; margin-top: 4px;">${info.desc}</div>
+                            </div>
+                            <div class="role-badge-large" style="background: ${info.color}20; color: ${info.color};">
+                                ${role.role.toUpperCase()}
+                            </div>
+                        </div>
+                        
+                        <div class="permissions-grid">
+                            ${Object.keys(permissionLabels).map(perm => `
+                                <div class="permission-item">
+                                    <input 
+                                        type="checkbox" 
+                                        class="permission-checkbox"
+                                        id="perm_${role.role}_${perm}"
+                                        ${permissions[perm] ? 'checked' : ''}
+                                        onchange="updatePermission('${role.role}', '${perm}', this.checked)"
+                                        ${role.role === 'admin' ? 'disabled' : ''}
+                                    >
+                                    <label class="permission-label" for="perm_${role.role}_${perm}">
+                                        <span class="permission-icon">${permissionLabels[perm].icon}</span>
+                                        ${permissionLabels[perm].label}
+                                    </label>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = html;
+        }
+
+        async function updatePermission(role, permission, value) {
+            try {
+                // Find role
+                const roleData = allRoles.find(r => r.role === role);
+                if (!roleData) return;
+
+                // Update permission
+                roleData.permissions[permission] = value;
+
+                // Save to database
+                const { error } = await supabaseClient
+                    .from('role_permissions')
+                    .update({ permissions: roleData.permissions })
+                    .eq('role', role);
+
+                if (error) throw error;
+
+                console.log(`✅ Permission updated: ${role}.${permission} = ${value}`);
+                
+                // Show save indicator
+                showSaveIndicator();
+
+                // If current user's role was changed, reload their permissions
+                if (currentUser.role === role) {
+                    currentUser.permissions = roleData.permissions;
+                    sessionStorage.setItem('morfUser', JSON.stringify(currentUser));
+                    updateNavigationVisibility();
+                }
+
+            } catch (error) {
+                console.error('Error updating permission:', error);
+                alert('Fehler beim Speichern: ' + error.message);
+                // Revert checkbox
+                document.getElementById(`perm_${role}_${permission}`).checked = !value;
+            }
+        }
+
+        function showSaveIndicator() {
+            const indicator = document.createElement('div');
+            indicator.className = 'save-indicator';
+            indicator.innerHTML = '✅ Gespeichert';
+            document.body.appendChild(indicator);
+
+            setTimeout(() => indicator.classList.add('show'), 10);
+            setTimeout(() => {
+                indicator.classList.remove('show');
+                setTimeout(() => indicator.remove(), 300);
+            }, 2000);
+        }
+
+        // ============================================
+        // PERMISSIONS SYSTEM
+        // ============================================
+        function hasPermission(permission) {
+            if (!currentUser) return false;
+            
+            // Admin has all rights
+            if (currentUser.role === 'admin') return true;
+            
+            // Stellvertreter also has all rights (without changing role permissions)
+            if (currentUser.isStellvertreter) return true;
+            
+            // Normal users: check their role permissions
+            return currentUser.permissions && currentUser.permissions[permission] === true;
+        }
+
+        function canViewPersonal() {
+            return hasPermission('canViewPersonal');
+        }
+
+        function canEditPersonal() {
+            return hasPermission('canEditPersonal');
+        }
+
+        function canDeletePersonal() {
+            return hasPermission('canDeletePersonal');
+        }
+
+        function canViewCalendar() {
+            return hasPermission('canViewCalendar');
+        }
+
+        function canEditCalendar() {
+            return hasPermission('canEditCalendar');
+        }
+
+        function canViewAuftraege() {
+            return hasPermission('canViewAuftraege');
+        }
+
+        function canCreateAuftraege() {
+            return hasPermission('canCreateAuftraege');
+        }
+
+        function canEditAuftraege() {
+            return hasPermission('canEditAuftraege');
+        }
+
+        function canDeleteAuftraege() {
+            return hasPermission('canDeleteAuftraege');
+        }
+
+        function canViewTagesprogramm() {
+            return hasPermission('canViewTagesprogramm');
+        }
+
+        function canEditEquipe() {
+            return hasPermission('canEditEquipe');
+        }
+
+        // ============================================
+        // DATA LOADING
+        // ============================================
+        let allMitarbeiter = [];
+
+        async function loadDashboardData() {
+            try {
+                // Load stats
+                const [mitarbeiterRes, auftraegeRes, abwesenheitenRes] = await Promise.all([
+                    supabaseClient.from('mitarbeiter').select('*', { count: 'exact' }),
+                    supabaseClient.from('auftraege').select('*', { count: 'exact' }),
+                    supabaseClient.from('abwesenheits_perioden').select('*', { count: 'exact' })
+                ]);
+
+                // Update stats
+                document.getElementById('statMitarbeiter').textContent = mitarbeiterRes.count || 0;
+                document.getElementById('statAuftraege').textContent = auftraegeRes.count || 0;
+                document.getElementById('statAbwesenheiten').textContent = abwesenheitenRes.count || 0;
+
+                console.log('✅ Dashboard data loaded');
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+        }
+
+        async function loadMitarbeiter() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('mitarbeiter')
+                    .select('*')
+                    .order('nachname');
+
+                if (error) throw error;
+
+                allMitarbeiter = data || [];
+                renderMitarbeiterTable();
+                
+                // Show/hide add button based on permissions
+                const addBtn = document.getElementById('btnAddMitarbeiter');
+                if (addBtn) {
+                    addBtn.style.display = canEditPersonal() ? 'block' : 'none';
+                }
+
+                console.log('✅ Mitarbeiter loaded:', allMitarbeiter.length);
+            } catch (error) {
+                console.error('Error loading mitarbeiter:', error);
+            }
+        }
+
+        function renderMitarbeiterTable() {
+            const container = document.getElementById('mitarbeiterTableContainer');
+
+            if (allMitarbeiter.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">👥</div>
+                        <h3>Keine Mitarbeiter gefunden</h3>
+                        <p style="margin-top: 8px;">Legen Sie Ihren ersten Mitarbeiter an!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Get filters
+            const searchTerm = document.getElementById('searchMitarbeiter')?.value.toLowerCase() || '';
+            const filterFunktion = document.getElementById('filterFunktion')?.value || '';
+            const filterFiliale = document.getElementById('filterFiliale')?.value || '';
+
+            // Apply filters
+            let filtered = allMitarbeiter.filter(m => {
+                const matchSearch = !searchTerm || 
+                    m.vorname.toLowerCase().includes(searchTerm) ||
+                    m.nachname.toLowerCase().includes(searchTerm) ||
+                    (m.personal_id && m.personal_id.toLowerCase().includes(searchTerm));
+                
+                const matchFunktion = !filterFunktion || m.funktion === filterFunktion;
+                const matchFiliale = !filterFiliale || m.filiale === filterFiliale;
+
+                return matchSearch && matchFunktion && matchFiliale;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🔍</div>
+                        <h3>Keine Treffer</h3>
+                        <p style="margin-top: 8px;">Versuchen Sie andere Filterkriterien</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const html = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Filiale</th>
+                            <th>Funktion</th>
+                            <th>Vorname</th>
+                            <th>Nachname</th>
+                            <th>Personal-ID</th>
+                            <th>Zugewiesen zu EC</th>
+                            <th>Status</th>
+                            ${canEditPersonal() || canDeletePersonal() ? '<th style="text-align: right;">Aktionen</th>' : ''}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${filtered.map(m => {
+                            // Find assigned EC name
+                            let assignedECName = '-';
+                            if (m.assigned_ec) {
+                                const ec = allMitarbeiter.find(e => e.id === m.assigned_ec);
+                                if (ec) {
+                                    assignedECName = `${ec.vorname} ${ec.nachname}`;
+                                }
+                            }
+
+                            return `
+                            <tr>
+                                <td>
+                                    <span class="badge badge-${m.filiale.toLowerCase()}">
+                                        ${m.filiale}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge badge-${m.funktion.toLowerCase()}">
+                                        ${m.funktion}
+                                    </span>
+                                </td>
+                                <td>${m.vorname}</td>
+                                <td><strong>${m.nachname}</strong></td>
+                                <td>${m.personal_id || '-'}</td>
+                                <td>${assignedECName}</td>
+                                <td>
+                                    ${m.aktiv ? 
+                                        '<span style="color: var(--success); font-weight: 600;">Aktiv</span>' : 
+                                        '<span style="color: var(--text-gray);">Inaktiv</span>'
+                                    }
+                                </td>
+                                ${canEditPersonal() || canDeletePersonal() ? `
+                                <td style="text-align: right;">
+                                    ${canEditPersonal() ? `
+                                        <button class="btn-icon" onclick="editMitarbeiterOpen(${m.id})" title="Bearbeiten">
+                                            ✏️
+                                        </button>
+                                        <button class="btn-icon ${m.aktiv ? '' : 'danger'}" onclick="toggleMitarbeiterStatus(${m.id})" title="${m.aktiv ? 'Deaktivieren' : 'Aktivieren'}">
+                                            ${m.aktiv ? '⏸️' : '▶️'}
+                                        </button>
+                                    ` : ''}
+                                    ${canDeletePersonal() ? `
+                                        <button class="btn-icon danger" onclick="deleteMitarbeiter(${m.id})" title="Löschen">
+                                            🗑️
+                                        </button>
+                                    ` : ''}
+                                </td>
+                                ` : ''}
+                            </tr>
+                        `}).join('')}
+                    </tbody>
+                </table>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        function filterMitarbeiter() {
+            renderMitarbeiterTable();
+        }
+
+        function resetFilters() {
+            document.getElementById('searchMitarbeiter').value = '';
+            document.getElementById('filterFunktion').value = '';
+            document.getElementById('filterFiliale').value = '';
+            renderMitarbeiterTable();
+        }
+
+        function openAddMitarbeiterDialog() {
+            if (!canEditPersonal()) {
+                alert('⛔ Keine Berechtigung um Mitarbeiter anzulegen');
+                return;
+            }
+
+            document.getElementById('dialogTitle').textContent = 'Neuer Mitarbeiter';
+            document.getElementById('mitarbeiterForm').reset();
+            document.getElementById('editMitarbeiterId').value = '';
+            document.getElementById('inputAktiv').checked = true;
+            
+            // Load EC dropdown
+            loadECDropdown();
+            
+            // Show dialog
+            document.getElementById('mitarbeiterDialog').classList.add('show');
+        }
+
+        async function editMitarbeiterOpen(id) {
+            if (!canEditPersonal()) {
+                alert('⛔ Keine Berechtigung um Mitarbeiter zu bearbeiten');
+                return;
+            }
+
+            const mitarbeiter = allMitarbeiter.find(m => m.id === id);
+            if (!mitarbeiter) return;
+
+            document.getElementById('dialogTitle').textContent = 'Mitarbeiter bearbeiten';
+            document.getElementById('editMitarbeiterId').value = mitarbeiter.id;
+            document.getElementById('inputVorname').value = mitarbeiter.vorname;
+            document.getElementById('inputNachname').value = mitarbeiter.nachname;
+            document.getElementById('inputPersonalId').value = mitarbeiter.personal_id || '';
+            document.getElementById('inputFunktion').value = mitarbeiter.funktion;
+            document.getElementById('inputFiliale').value = mitarbeiter.filiale;
+            document.getElementById('inputTeamgroesse').value = mitarbeiter.teamgroesse || 1;
+            document.getElementById('inputAktiv').checked = mitarbeiter.aktiv;
+
+            // Check if system user exists
+            try {
+                const { data: systemUser } = await supabaseClient
+                    .from('system_users')
+                    .select('*')
+                    .eq('mitarbeiter_id', mitarbeiter.id)
+                    .single();
+
+                if (systemUser) {
+                    document.getElementById('inputSystemZugang').checked = true;
+                    document.getElementById('existingSystemUserId').value = systemUser.id;
+                    document.getElementById('inputSystemRolle').value = systemUser.role;
+                    document.getElementById('inputUsername').value = systemUser.username;
+                    document.getElementById('inputPassword').value = systemUser.password;
+                    toggleSystemZugang();
+                } else {
+                    document.getElementById('inputSystemZugang').checked = false;
+                    document.getElementById('existingSystemUserId').value = '';
+                    toggleSystemZugang();
+                }
+            } catch (error) {
+                // No system user found - that's ok
+                document.getElementById('inputSystemZugang').checked = false;
+                document.getElementById('existingSystemUserId').value = '';
+            }
+
+            // Load EC dropdown and set value
+            loadECDropdown();
+            if (mitarbeiter.assigned_ec) {
+                document.getElementById('inputZugewiesen').value = mitarbeiter.assigned_ec;
+            }
+
+            // Show/hide conditional fields
+            handleFunktionChange();
+
+            // Show dialog
+            document.getElementById('mitarbeiterDialog').classList.add('show');
+        }
+
+        function closeMitarbeiterDialog() {
+            document.getElementById('mitarbeiterDialog').classList.remove('show');
+        }
+
+        function handleFunktionChange() {
+            const funktion = document.getElementById('inputFunktion').value;
+            const teamgroesseGroup = document.getElementById('teamgroesseGroup');
+            const zugewiesenGroup = document.getElementById('zugewiesenGroup');
+
+            if (funktion === 'EC') {
+                teamgroesseGroup.style.display = 'block';
+                zugewiesenGroup.style.display = 'none';
+                
+                // Suggest EC role for system access
+                if (document.getElementById('inputSystemZugang').checked) {
+                    document.getElementById('inputSystemRolle').value = 'equipenchef';
+                }
+            } else if (funktion === 'MA') {
+                teamgroesseGroup.style.display = 'none';
+                zugewiesenGroup.style.display = 'block';
+            } else {
+                teamgroesseGroup.style.display = 'none';
+                zugewiesenGroup.style.display = 'none';
+            }
+        }
+
+        function toggleSystemZugang() {
+            const checked = document.getElementById('inputSystemZugang').checked;
+            const fields = document.getElementById('systemZugangFields');
+            
+            if (checked) {
+                fields.style.display = 'block';
+                generateUsername();
+                
+                // Auto-select role based on funktion
+                const funktion = document.getElementById('inputFunktion').value;
+                if (funktion === 'EC') {
+                    document.getElementById('inputSystemRolle').value = 'equipenchef';
+                }
+            } else {
+                fields.style.display = 'none';
+            }
+        }
+
+        function generateUsername() {
+            const vorname = document.getElementById('inputVorname').value.trim().toLowerCase();
+            const nachname = document.getElementById('inputNachname').value.trim().toLowerCase();
+            
+            if (vorname && nachname) {
+                // Remove umlauts and special chars
+                const username = (vorname + '.' + nachname)
+                    .replace(/ä/g, 'ae')
+                    .replace(/ö/g, 'oe')
+                    .replace(/ü/g, 'ue')
+                    .replace(/ß/g, 'ss')
+                    .replace(/[^a-z.]/g, '');
+                
+                document.getElementById('inputUsername').value = username;
+                checkUsernameAvailability();
+            }
+        }
+
+        let usernameCheckTimeout;
+        async function checkUsernameAvailability() {
+            clearTimeout(usernameCheckTimeout);
+            
+            const username = document.getElementById('inputUsername').value.trim();
+            const statusEl = document.getElementById('usernameStatus');
+            const editingUserId = document.getElementById('existingSystemUserId').value;
+
+            if (!username) {
+                statusEl.innerHTML = '';
+                return;
+            }
+
+            // Show checking indicator
+            statusEl.innerHTML = '<span style="color: var(--text-gray);">🔄 Prüfe Verfügbarkeit...</span>';
+
+            // Debounce
+            usernameCheckTimeout = setTimeout(async () => {
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('system_users')
+                        .select('id')
+                        .eq('username', username);
+
+                    if (error) throw error;
+
+                    // If editing and username belongs to current user, it's ok
+                    if (editingUserId && data.length === 1 && data[0].id === parseInt(editingUserId)) {
+                        statusEl.innerHTML = '<span style="color: var(--success);">✅ Ihr aktueller Benutzername</span>';
+                        return;
+                    }
+
+                    if (data && data.length > 0) {
+                        // Username taken - suggest alternative
+                        const suggestion = await suggestAlternativeUsername(username);
+                        statusEl.innerHTML = `
+                            <span style="color: var(--danger);">❌ Bereits vergeben</span>
+                            <button type="button" onclick="document.getElementById('inputUsername').value='${suggestion}'; checkUsernameAvailability();" 
+                                    style="margin-left: 8px; padding: 2px 8px; border: 1px solid var(--primary); background: white; color: var(--primary); border-radius: 4px; font-size: 11px; cursor: pointer;">
+                                "${suggestion}" verwenden
+                            </button>
+                        `;
+                    } else {
+                        statusEl.innerHTML = '<span style="color: var(--success);">✅ Verfügbar</span>';
+                    }
+                } catch (error) {
+                    console.error('Username check error:', error);
+                    statusEl.innerHTML = '<span style="color: var(--text-gray);">Prüfung fehlgeschlagen</span>';
+                }
+            }, 500);
+        }
+
+        async function suggestAlternativeUsername(baseUsername) {
+            // Try username2, username3, etc.
+            for (let i = 2; i <= 99; i++) {
+                const candidate = baseUsername + i;
+                
+                const { data } = await supabaseClient
+                    .from('system_users')
+                    .select('id')
+                    .eq('username', candidate);
+
+                if (!data || data.length === 0) {
+                    return candidate;
+                }
+            }
+            
+            // Fallback: add timestamp
+            return baseUsername + '_' + Date.now();
+        }
+
+        // Auto-generate username when name changes
+        document.addEventListener('DOMContentLoaded', () => {
+            const vornameInput = document.getElementById('inputVorname');
+            const nachnameInput = document.getElementById('inputNachname');
+            
+            if (vornameInput) {
+                vornameInput.addEventListener('blur', () => {
+                    if (document.getElementById('inputSystemZugang').checked) {
+                        generateUsername();
+                    }
+                });
+            }
+            
+            if (nachnameInput) {
+                nachnameInput.addEventListener('blur', () => {
+                    if (document.getElementById('inputSystemZugang').checked) {
+                        generateUsername();
+                    }
+                });
+            }
+        });
+
+        function loadECDropdown() {
+            const select = document.getElementById('inputZugewiesen');
+            const ecs = allMitarbeiter.filter(m => m.funktion === 'EC' && m.aktiv);
+
+            select.innerHTML = '<option value="">Nicht zugewiesen</option>';
+            ecs.forEach(ec => {
+                const option = document.createElement('option');
+                option.value = ec.id;
+                option.textContent = `${ec.vorname} ${ec.nachname}`;
+                select.appendChild(option);
+            });
+        }
+
+        async function saveMitarbeiter(event) {
+            event.preventDefault();
+
+            const editId = document.getElementById('editMitarbeiterId').value;
+            const vorname = document.getElementById('inputVorname').value.trim();
+            const nachname = document.getElementById('inputNachname').value.trim();
+            const personalId = document.getElementById('inputPersonalId').value.trim();
+            const funktion = document.getElementById('inputFunktion').value;
+            const filiale = document.getElementById('inputFiliale').value;
+            const teamgroesse = document.getElementById('inputTeamgroesse').value;
+            const zugewiesen = document.getElementById('inputZugewiesen').value;
+            const aktiv = document.getElementById('inputAktiv').checked;
+
+            // System access fields
+            const systemZugang = document.getElementById('inputSystemZugang').checked;
+            const systemRolle = document.getElementById('inputSystemRolle').value;
+            const username = document.getElementById('inputUsername').value.trim();
+            const password = document.getElementById('inputPassword').value.trim();
+
+            // Validation for system access
+            if (systemZugang) {
+                if (!systemRolle || !username || !password) {
+                    alert('Bitte füllen Sie alle System-Zugang Felder aus!');
+                    return;
+                }
+
+                // Check username availability one more time before saving
+                const existingUserId = document.getElementById('existingSystemUserId').value;
+                const { data: existingUsers } = await supabaseClient
+                    .from('system_users')
+                    .select('id')
+                    .eq('username', username);
+
+                if (existingUsers && existingUsers.length > 0) {
+                    // If editing and it's the same user, that's ok
+                    if (!existingUserId || existingUsers[0].id !== parseInt(existingUserId)) {
+                        alert(`❌ Benutzername "${username}" ist bereits vergeben!\n\nBitte wählen Sie einen anderen Namen.`);
+                        return;
+                    }
+                }
+            }
+
+            try {
+                const mitarbeiterId = editId ? parseInt(editId) : Date.now();
+
+                const mitarbeiterData = {
+                    vorname,
+                    nachname,
+                    personal_id: personalId || null,
+                    funktion,
+                    filiale,
+                    aktiv,
+                    teamgroesse: funktion === 'EC' ? parseInt(teamgroesse) : null,
+                    assigned_ec: funktion === 'MA' && zugewiesen ? parseInt(zugewiesen) : null
+                };
+
+                if (editId) {
+                    // Update mitarbeiter
+                    const { error } = await supabaseClient
+                        .from('mitarbeiter')
+                        .update(mitarbeiterData)
+                        .eq('id', mitarbeiterId);
+
+                    if (error) throw error;
+                    console.log('✅ Mitarbeiter updated');
+                } else {
+                    // Insert new mitarbeiter
+                    mitarbeiterData.id = mitarbeiterId;
+                    const { error } = await supabaseClient
+                        .from('mitarbeiter')
+                        .insert([mitarbeiterData]);
+
+                    if (error) throw error;
+                    console.log('✅ Mitarbeiter created');
+                }
+
+                // Handle system user
+                if (systemZugang) {
+                    const existingUserId = document.getElementById('existingSystemUserId').value;
+
+                    const systemUserData = {
+                        username,
+                        password,
+                        name: `${vorname} ${nachname}`,
+                        role: systemRolle,
+                        active: aktiv,
+                        mitarbeiter_id: mitarbeiterId
+                    };
+
+                    if (existingUserId) {
+                        // Update existing system user
+                        const { error } = await supabaseClient
+                            .from('system_users')
+                            .update(systemUserData)
+                            .eq('id', parseInt(existingUserId));
+
+                        if (error) throw error;
+                        console.log('✅ System user updated');
+                    } else {
+                        // Check if username already exists
+                        const { data: existingUser } = await supabaseClient
+                            .from('system_users')
+                            .select('id')
+                            .eq('username', username)
+                            .single();
+
+                        if (existingUser) {
+                            throw new Error(`Benutzername "${username}" existiert bereits!`);
+                        }
+
+                        // Create new system user
+                        const { error } = await supabaseClient
+                            .from('system_users')
+                            .insert([systemUserData]);
+
+                        if (error) throw error;
+                        console.log('✅ System user created');
+                    }
+                }
+
+                closeMitarbeiterDialog();
+                await loadMitarbeiter();
+                await loadDashboardData();
+
+                if (systemZugang && !editId) {
+                    alert(`✅ Mitarbeiter erfasst!\n\nLogin-Daten:\nUsername: ${username}\nPasswort: ${password}\n\nBitte notieren und dem Mitarbeiter mitteilen.`);
+                }
+
+            } catch (error) {
+                console.error('Error saving:', error);
+                alert('Fehler beim Speichern: ' + error.message);
+            }
+        }
+
+        async function toggleMitarbeiterStatus(id) {
+            if (!canEditPersonal()) {
+                alert('⛔ Keine Berechtigung um Mitarbeiter zu deaktivieren');
+                return;
+            }
+
+            const mitarbeiter = allMitarbeiter.find(m => m.id === id);
+            if (!mitarbeiter) return;
+
+            const newStatus = !mitarbeiter.aktiv;
+            const action = newStatus ? 'aktivieren' : 'deaktivieren';
+
+            if (!confirm(`${mitarbeiter.vorname} ${mitarbeiter.nachname} wirklich ${action}?`)) {
+                return;
+            }
+
+            try {
+                const { error } = await supabaseClient
+                    .from('mitarbeiter')
+                    .update({ aktiv: newStatus })
+                    .eq('id', id);
+
+                if (error) throw error;
+
+                console.log(`✅ Mitarbeiter ${action}d`);
+                await loadMitarbeiter();
+
+            } catch (error) {
+                console.error('Error toggling status:', error);
+                alert('Fehler: ' + error.message);
+            }
+        }
+
+        async function deleteMitarbeiter(id) {
+            if (!canDeletePersonal()) {
+                alert('⛔ Keine Berechtigung um Mitarbeiter zu löschen');
+                return;
+            }
+
+            const mitarbeiter = allMitarbeiter.find(m => m.id === id);
+            if (!mitarbeiter) return;
+
+            if (!confirm(`${mitarbeiter.vorname} ${mitarbeiter.nachname} wirklich löschen?`)) {
+                return;
+            }
+
+            try {
+                const { error } = await supabaseClient
+                    .from('mitarbeiter')
+                    .delete()
+                    .eq('id', id);
+
+                if (error) throw error;
+
+                console.log('✅ Mitarbeiter deleted');
+                await loadMitarbeiter();
+                await loadDashboardData();
+
+            } catch (error) {
+                console.error('Error deleting:', error);
+                alert('Fehler beim Löschen: ' + error.message);
+            }
+        }
+    </script>
+
+    <style>
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 9999;
+        }
+
+        .modal.show {
+            display: block;
+        }
+
+        .modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+            margin: 0;
+        }
+
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: var(--bg-light);
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            background: var(--border);
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-dark);
+            margin-bottom: 8px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1);
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+        }
+
+        .btn-secondary {
+            background: var(--bg-light);
+            color: var(--text-dark);
+            border: 2px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+    </style>
+
+    <!-- Berechtigungen Modal -->
+    <div id="berechtigungenModal" class="modal">
+        <div class="modal-overlay" onclick="closeBerechtigungen()"></div>
+        <div class="modal-content" style="max-width: 1000px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h2>Rollen & Berechtigungen</h2>
+                <button class="modal-close" onclick="closeBerechtigungen()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div id="stellvertreterSection" style="background: #fef3c7; border: 2px solid #f59e0b; border-radius: 12px; padding: 20px; margin-bottom: 24px; display: none;">
+                    <h3 style="margin: 0 0 12px 0; color: var(--primary); display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 24px;">👥</span>
+                        Admin-Stellvertreter
+                    </h3>
+                    <p style="color: var(--text-gray); font-size: 14px; margin: 0 0 16px 0;">
+                        Wählen Sie Benutzer aus, die <strong>temporär volle Admin-Rechte</strong> erhalten sollen.
+                        Diese können ebenfalls Berechtigungen verwalten.
+                    </p>
+                    <div id="stellvertreterContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px;">
+                        <!-- Will be loaded dynamically -->
+                    </div>
+                </div>
+
+                <h3 style="margin: 0 0 8px 0; color: var(--primary);">Rollenberechtigungen</h3>
+                <p style="color: var(--text-gray); margin-bottom: 24px; font-size: 14px;">
+                    Definieren Sie welche Rolle welche Bereiche sehen und bearbeiten darf.
+                    <strong>Änderungen werden sofort wirksam.</strong>
+                </p>
+                <div id="rolesPermissionsModalContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Abwesenheit Dialog -->
+    <div id="abwesenheitDialog" class="modal">
+        <div class="modal-overlay" onclick="closeAbwesenheitDialog()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="abwesenheitDialogTitle">Neue Abwesenheit</h2>
+                <button class="modal-close" onclick="closeAbwesenheitDialog()">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="abwesenheitForm" onsubmit="saveAbwesenheit(event); return false;">
+                    <div class="form-group">
+                        <label for="inputAbwMitarbeiter">Mitarbeiter *</label>
+                        <select id="inputAbwMitarbeiter" required>
+                            <option value="">Bitte wählen...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="inputAbwTyp">Art der Abwesenheit *</label>
+                        <select id="inputAbwTyp" required>
+                            <option value="">Bitte wählen...</option>
+                            <option value="ARB">ARB - Arbeit (überschreibt Abwesenheit)</option>
+                            <option value="FE">FE - Ferien</option>
+                            <option value="KO">KO - Kompensation</option>
+                            <option value="BF">BF - Betriebsferien</option>
+                            <option value="KR">KR - Krankheit</option>
+                            <option value="UF">UF - Unfall</option>
+                            <option value="FT">FT - Feiertag</option>
+                        </select>
+                        <small style="color: var(--text-gray); font-size: 12px; display: block; margin-top: 4px;">
+                            "ARB" markiert Mitarbeiter als verfügbar (z.B. früher gesund)
+                        </small>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="inputAbwVon">Von (Startdatum) *</label>
+                            <input type="date" id="inputAbwVon" required onchange="calculateAbwTage()">
+                        </div>
+                        <div class="form-group">
+                            <label for="inputAbwBis">Bis (Enddatum) *</label>
+                            <input type="date" id="inputAbwBis" required onchange="calculateAbwTage()">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Anzahl Tage</label>
+                        <input type="text" id="inputAbwTage" readonly style="background: var(--bg-light);">
+                    </div>
+
+                    <input type="hidden" id="editAbwesenheitId">
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeAbwesenheitDialog()">
+                            Abbrechen
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            Speichern
+                        </button>
+                        <button type="button" class="btn" style="background: var(--danger); color: white; margin-left: auto;" id="btnDeleteAbwesenheit" onclick="deleteAbwesenheit()" style="display: none;">
+                            Löschen
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mitarbeiter Dialog -->
+    <div id="mitarbeiterDialog" class="modal">
+        <div class="modal-overlay" onclick="closeMitarbeiterDialog()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="dialogTitle">Neuer Mitarbeiter</h2>
+                <button class="modal-close" onclick="closeMitarbeiterDialog()">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="mitarbeiterForm" onsubmit="saveMitarbeiter(event); return false;">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="inputVorname">Vorname *</label>
+                            <input type="text" id="inputVorname" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="inputNachname">Nachname *</label>
+                            <input type="text" id="inputNachname" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="inputPersonalId">Personal-ID</label>
+                            <input type="text" id="inputPersonalId">
+                        </div>
+                        <div class="form-group">
+                            <label for="inputFunktion">Funktion *</label>
+                            <select id="inputFunktion" required onchange="handleFunktionChange()">
+                                <option value="">Bitte wählen...</option>
+                                <option value="EC">EC - Equipenchef</option>
+                                <option value="MA">MA - Mitarbeiter</option>
+                                <option value="VW">VW - Verwaltung</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="inputFiliale">Filiale *</label>
+                            <select id="inputFiliale" required>
+                                <option value="">Bitte wählen...</option>
+                                <option value="ZH">Zürich</option>
+                                <option value="VW">Verwaltung</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="teamgroesseGroup" style="display: none;">
+                            <label for="inputTeamgroesse">Teamgröße</label>
+                            <input type="number" id="inputTeamgroesse" min="1" max="10" value="1">
+                        </div>
+                    </div>
+
+                    <div class="form-group" id="zugewiesenGroup" style="display: none;">
+                        <label for="inputZugewiesen">Zugewiesen zu EC</label>
+                        <select id="inputZugewiesen">
+                            <option value="">Nicht zugewiesen</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="inputAktiv" checked>
+                            <span>Mitarbeiter ist aktiv</span>
+                        </label>
+                    </div>
+
+                    <div style="margin: 24px 0; padding-top: 24px; border-top: 2px solid var(--border);">
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="inputSystemZugang" onchange="toggleSystemZugang()">
+                                <span><strong>System-Zugang gewähren</strong> (Mitarbeiter kann sich einloggen)</span>
+                            </label>
+                        </div>
+
+                        <div id="systemZugangFields" style="display: none; padding: 16px; background: var(--bg-light); border-radius: 8px; margin-top: 16px;">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="inputSystemRolle">Rolle im System *</label>
+                                    <select id="inputSystemRolle">
+                                        <option value="">Bitte wählen...</option>
+                                        <option value="equipenchef">EC - Equipenchef (Tagesprogramm mobil)</option>
+                                        <option value="tkb">TKB - Technischer Kundenberater</option>
+                                        <option value="disponent">D - Disponent</option>
+                                        <option value="backoffice">BO - Backoffice (nur ansehen)</option>
+                                        <option value="geschaeftsleitung">GL - Geschäftsleitung</option>
+                                        <option value="admin">AD - Administrator</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="inputUsername">Benutzername *</label>
+                                    <input type="text" id="inputUsername" placeholder="vorname.nachname" oninput="checkUsernameAvailability()">
+                                    <div id="usernameStatus" style="margin-top: 4px; font-size: 12px;"></div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="inputPassword">Passwort *</label>
+                                <input type="text" id="inputPassword" placeholder="Initiales Passwort festlegen">
+                                <small style="color: var(--text-gray); font-size: 12px;">Mitarbeiter kann es später ändern</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <input type="hidden" id="editMitarbeiterId">
+                    <input type="hidden" id="existingSystemUserId">
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeMitarbeiterDialog()">
+                            Abbrechen
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            Speichern
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

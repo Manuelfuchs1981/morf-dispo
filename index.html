@@ -5239,12 +5239,9 @@
     </div>
 
     <script>
-    // Mein Profil Functions
-    let tempFotoData = null; // Temporary storage for unsaved foto
-
-    async function openMeinProfil() {
+    // Mein Profil Functions - Make globally available
+    window.openMeinProfil = async function() {
         document.getElementById('userDropdown').classList.remove('show');
-        tempFotoData = null; // Reset temp data
         
         // Load current user's mitarbeiter data by name
         try {
@@ -5257,7 +5254,6 @@
             
             // Store mitarbeiter ID for later use
             currentUser.mitarbeiterId = mitarbeiter?.id;
-            currentUser.originalFoto = mitarbeiter?.foto; // Store original
             
             const preview = document.getElementById('profilFotoPreview');
             if (mitarbeiter?.foto) {
@@ -5274,42 +5270,48 @@
         }
         
         document.getElementById('meinProfilDialog').classList.add('show');
-    }
+    };
 
-    function closeMeinProfil() {
-        tempFotoData = null; // Discard changes
+    window.closeMeinProfil = function() {
         document.getElementById('meinProfilDialog').classList.remove('show');
-    }
+    };
 
-    async function saveMeinProfil() {
-        if (!currentUser.mitarbeiterId) {
-            alert('⚠️ Kein Mitarbeiter-Eintrag gefunden');
-            return;
-        }
+    window.saveMeinProfil = function() {
+        // Foto is already saved by cropper, just close
+        closeMeinProfil();
+    };
 
+    window.updateHeaderAvatar = async function() {
         try {
-            // Save foto if changed
-            if (tempFotoData !== null) {
-                const { error } = await supabaseClient
-                    .from('mitarbeiter')
-                    .update({ foto: tempFotoData })
-                    .eq('id', currentUser.mitarbeiterId);
-                
-                if (error) throw error;
-                
-                // Update header avatar
-                await updateHeaderAvatar();
+            const { data: mitarbeiter } = await supabaseClient
+                .from('mitarbeiter')
+                .select('foto')
+                .ilike('vorname', currentUser.name.split(' ')[0])
+                .ilike('nachname', currentUser.name.split(' ').slice(1).join(' '))
+                .single();
+            
+            const avatar = document.getElementById('userAvatar');
+            if (mitarbeiter?.foto) {
+                avatar.innerHTML = `<img src="${mitarbeiter.foto}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+            } else {
+                avatar.textContent = getInitials(currentUser.name);
+                avatar.style.background = '#4f46e5';
             }
-            
-            document.getElementById('meinProfilDialog').classList.remove('show');
-            
         } catch (error) {
-            console.error('Error saving:', error);
-            alert('❌ Fehler beim Speichern: ' + error.message);
+            console.error('Error updating avatar:', error);
         }
-    }
+    };
 
-    async function handleProfilFotoChange(event) {
+    // Cropper variables
+    let cropImage = null;
+    let cropScale = 100;
+    let cropX = 0;
+    let cropY = 0;
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+
+    window.handleProfilFotoChange = async function(event) {
         const file = event.target.files[0];
         if (!file) return;
         
@@ -5330,33 +5332,134 @@
             return;
         }
         
-        try {
-            // Convert to base64
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const base64 = e.target.result;
+        // Load image into cropper
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            cropImage = new Image();
+            cropImage.onload = () => {
+                // Reset cropper
+                cropScale = 100;
+                cropX = 0;
+                cropY = 0;
+                document.getElementById('zoomSlider').value = 100;
                 
-                // Store temporarily - don't save yet!
-                tempFotoData = base64;
-                
-                // Update preview
-                const preview = document.getElementById('profilFotoPreview');
-                preview.innerHTML = `<img src="${base64}" style="width: 100%; height: 100%; object-fit: cover;">`;
-                document.getElementById('btnRemoveFoto').style.display = 'inline-block';
+                // Open cropper
+                document.getElementById('fotoCropperDialog').classList.add('show');
+                setupCropCanvas();
             };
-            reader.readAsDataURL(file);
+            cropImage.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    window.setupCropCanvas = function() {
+        const canvas = document.getElementById('cropCanvas');
+        canvas.onmousedown = startDrag;
+        canvas.onmousemove = drag;
+        canvas.onmouseup = endDrag;
+        canvas.onmouseleave = endDrag;
+        drawCropCanvas();
+    }
+
+    window.drawCropCanvas = function() {
+        const canvas = document.getElementById('cropCanvas');
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, 300, 300);
+        
+        if (!cropImage) return;
+        
+        const scale = cropScale / 100;
+        const width = cropImage.width * scale;
+        const height = cropImage.height * scale;
+        ctx.drawImage(cropImage, cropX, cropY, width, height);
+    }
+
+    window.startDrag = function(e) {
+        isDragging = true;
+        const rect = e.target.getBoundingClientRect();
+        dragStartX = e.clientX - rect.left - cropX;
+        dragStartY = e.clientY - rect.top - cropY;
+    }
+
+    window.drag = function(e) {
+        if (!isDragging) return;
+        const rect = e.target.getBoundingClientRect();
+        cropX = e.clientX - rect.left - dragStartX;
+        cropY = e.clientY - rect.top - dragStartY;
+        drawCropCanvas();
+    }
+
+    window.endDrag = function() {
+        isDragging = false;
+    }
+
+    window.updateCropZoom = function() {
+        cropScale = parseInt(document.getElementById('zoomSlider').value);
+        drawCropCanvas();
+    }
+
+    window.closeFotoCropper = function() {
+        document.getElementById('fotoCropperDialog').classList.remove('show');
+        document.getElementById('profilFotoInput').value = '';
+    }
+
+    window.saveCroppedFoto = async function() {
+        const canvas = document.getElementById('cropCanvas');
+        const cropCanvas = document.createElement('canvas');
+        cropCanvas.width = 200;
+        cropCanvas.height = 200;
+        const ctx = cropCanvas.getContext('2d');
+        ctx.drawImage(canvas, 50, 50, 200, 200, 0, 0, 200, 200);
+        
+        const base64 = cropCanvas.toDataURL('image/jpeg', 0.9);
+        
+        try {
+            const { error } = await supabaseClient
+                .from('mitarbeiter')
+                .update({ foto: base64 })
+                .eq('id', currentUser.mitarbeiterId);
             
+            if (error) throw error;
+            
+            const preview = document.getElementById('profilFotoPreview');
+            preview.innerHTML = `<img src="${base64}" style="width: 100%; height: 100%; object-fit: cover;">`;
+            document.getElementById('btnRemoveFoto').style.display = 'inline-block';
+            
+            updateHeaderAvatar();
+            closeFotoCropper();
         } catch (error) {
-            console.error('Error loading foto:', error);
-            alert('❌ Fehler beim Laden: ' + error.message);
+            console.error('Error:', error);
+            alert('❌ Fehler: ' + error.message);
         }
     }
 
-    function removeProfilFoto() {
+    window.removeProfilFoto = async function() {
         if (!confirm('Foto wirklich entfernen?')) return;
         
-        // Set temp data to null (will be saved on Save)
-        tempFotoData = null;
+        if (!currentUser.mitarbeiterId) {
+            alert('⚠️ Kein Mitarbeiter-Eintrag gefunden');
+            return;
+        }
+        
+        try {
+            const { error } = await supabaseClient
+                .from('mitarbeiter')
+                .update({ foto: null })
+                .eq('id', currentUser.mitarbeiterId);
+            
+            if (error) throw error;
+            
+            const preview = document.getElementById('profilFotoPreview');
+            preview.innerHTML = getInitials(currentUser.name);
+            preview.style.background = 'var(--primary)';
+            document.getElementById('btnRemoveFoto').style.display = 'none';
+            
+            updateHeaderAvatar();
+        } catch (error) {
+            console.error('Error:', error);
+            alert('❌ Fehler: ' + error.message);
+        }
+    }
         
         // Reset preview
         const preview = document.getElementById('profilFotoPreview');

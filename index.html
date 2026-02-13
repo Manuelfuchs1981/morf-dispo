@@ -1878,6 +1878,62 @@
             console.log('✅ Logged out');
         }
 
+        // Mein Profil Functions (for local file:// testing)
+        async function openMeinProfil() {
+            document.getElementById('userDropdown').classList.remove('show');
+            
+            try {
+                const { data: mitarbeiter } = await supabaseClient
+                    .from('mitarbeiter')
+                    .select('id, foto')
+                    .ilike('vorname', currentUser.name.split(' ')[0])
+                    .ilike('nachname', currentUser.name.split(' ').slice(1).join(' '))
+                    .single();
+                
+                currentUser.mitarbeiterId = mitarbeiter?.id;
+                
+                const preview = document.getElementById('profilFotoPreview');
+                if (mitarbeiter?.foto) {
+                    preview.innerHTML = `<img src="${mitarbeiter.foto}" style="width: 100%; height: 100%; object-fit: cover;">`;
+                    document.getElementById('btnRemoveFoto').style.display = 'inline-block';
+                } else {
+                    preview.textContent = getInitials(currentUser.name);
+                    preview.style.background = 'var(--primary)';
+                    document.getElementById('btnRemoveFoto').style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error loading foto:', error);
+                alert('⚠️ Kein Mitarbeiter-Eintrag gefunden für: ' + currentUser.name);
+            }
+            
+            document.getElementById('meinProfilDialog').classList.add('show');
+        }
+
+        function closeMeinProfil() {
+            document.getElementById('meinProfilDialog').classList.remove('show');
+        }
+
+        async function updateHeaderAvatar() {
+            try {
+                const { data: mitarbeiter } = await supabaseClient
+                    .from('mitarbeiter')
+                    .select('foto')
+                    .ilike('vorname', currentUser.name.split(' ')[0])
+                    .ilike('nachname', currentUser.name.split(' ').slice(1).join(' '))
+                    .single();
+                
+                const avatar = document.getElementById('userAvatar');
+                if (mitarbeiter?.foto) {
+                    avatar.innerHTML = `<img src="${mitarbeiter.foto}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+                } else {
+                    avatar.textContent = getInitials(currentUser.name);
+                    avatar.style.background = '#4f46e5';
+                }
+            } catch (error) {
+                console.error('Error updating avatar:', error);
+            }
+        }
+
         function checkSession() {
             const savedUser = sessionStorage.getItem('morfUser');
             if (savedUser) {
@@ -5459,13 +5515,6 @@
             console.error('Error:', error);
             alert('❌ Fehler: ' + error.message);
         }
-    }
-        
-        // Reset preview
-        const preview = document.getElementById('profilFotoPreview');
-        preview.innerHTML = getInitials(currentUser.name);
-        preview.style.background = 'var(--primary)';
-        document.getElementById('btnRemoveFoto').style.display = 'none';
     }
 
     async function updateHeaderAvatar() {

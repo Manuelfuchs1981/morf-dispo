@@ -5172,24 +5172,66 @@
                 <button class="modal-close" onclick="closeMeinProfil()">✕</button>
             </div>
             <div class="modal-body">
-                <div style="text-align: center; margin-bottom: 24px;">
-                    <div id="profilFotoPreview" style="width: 120px; height: 120px; border-radius: 50%; margin: 0 auto 16px; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 48px; font-weight: 700; overflow: hidden;">
+                <div style="display: flex; align-items: center; gap: 24px; margin-bottom: 24px;">
+                    <div id="profilFotoPreview" style="width: 100px; height: 100px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 36px; font-weight: 700; overflow: hidden; flex-shrink: 0;">
                         MF
                     </div>
-                    <input type="file" id="profilFotoInput" accept="image/*" style="display: none;" onchange="handleProfilFotoChange(event)">
-                    <button class="btn btn-secondary" onclick="document.getElementById('profilFotoInput').click()">
-                        📷 Foto hochladen
-                    </button>
-                    <button class="btn btn-secondary" onclick="removeProfilFoto()" id="btnRemoveFoto" style="display: none; margin-left: 8px;">
-                        🗑️ Entfernen
-                    </button>
+                    <div style="flex: 1;">
+                        <input type="file" id="profilFotoInput" accept="image/*" style="display: none;" onchange="handleProfilFotoChange(event)">
+                        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                            <button class="btn btn-secondary" onclick="document.getElementById('profilFotoInput').click()" style="font-size: 13px; padding: 8px 16px;">
+                                📷 Foto ändern
+                            </button>
+                            <button class="btn btn-secondary" onclick="removeProfilFoto()" id="btnRemoveFoto" style="display: none; font-size: 13px; padding: 8px 16px;">
+                                🗑️ Entfernen
+                            </button>
+                        </div>
+                        <p style="color: var(--text-gray); font-size: 12px; margin: 0;">
+                            Empfohlen: Quadratisches Bild, max. 2 MB
+                        </p>
+                    </div>
                 </div>
-                <p style="text-align: center; color: var(--text-gray); font-size: 13px;">
-                    Empfohlen: Quadratisches Bild, max. 2 MB
-                </p>
                 <div class="modal-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeMeinProfil()">
-                        Schließen
+                        Abbrechen
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="saveMeinProfil()">
+                        Speichern
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Foto Cropper Dialog -->
+    <div id="fotoCropperDialog" class="modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2>Foto zuschneiden</h2>
+                <button class="modal-close" onclick="closeFotoCropper()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div style="position: relative; width: 300px; height: 300px; margin: 0 auto 16px; border: 2px solid var(--border); border-radius: 8px; overflow: hidden; background: #f5f5f5;">
+                    <canvas id="cropCanvas" width="300" height="300" style="cursor: move; display: block;"></canvas>
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 200px; height: 200px; border: 3px solid white; border-radius: 50%; pointer-events: none; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);"></div>
+                </div>
+                
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; margin-bottom: 8px; font-size: 13px; font-weight: 600;">Zoom</label>
+                    <input type="range" id="zoomSlider" min="100" max="300" value="100" style="width: 100%;" oninput="updateCropZoom()">
+                </div>
+                
+                <p style="text-align: center; color: var(--text-gray); font-size: 12px;">
+                    Ziehen Sie das Bild um es zu positionieren
+                </p>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeFotoCropper()">
+                        Abbrechen
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="saveCroppedFoto()">
+                        Übernehmen
                     </button>
                 </div>
             </div>
@@ -5198,8 +5240,11 @@
 
     <script>
     // Mein Profil Functions
+    let tempFotoData = null; // Temporary storage for unsaved foto
+
     async function openMeinProfil() {
         document.getElementById('userDropdown').classList.remove('show');
+        tempFotoData = null; // Reset temp data
         
         // Load current user's mitarbeiter data by name
         try {
@@ -5212,6 +5257,7 @@
             
             // Store mitarbeiter ID for later use
             currentUser.mitarbeiterId = mitarbeiter?.id;
+            currentUser.originalFoto = mitarbeiter?.foto; // Store original
             
             const preview = document.getElementById('profilFotoPreview');
             if (mitarbeiter?.foto) {
@@ -5231,7 +5277,36 @@
     }
 
     function closeMeinProfil() {
+        tempFotoData = null; // Discard changes
         document.getElementById('meinProfilDialog').classList.remove('show');
+    }
+
+    async function saveMeinProfil() {
+        if (!currentUser.mitarbeiterId) {
+            alert('⚠️ Kein Mitarbeiter-Eintrag gefunden');
+            return;
+        }
+
+        try {
+            // Save foto if changed
+            if (tempFotoData !== null) {
+                const { error } = await supabaseClient
+                    .from('mitarbeiter')
+                    .update({ foto: tempFotoData })
+                    .eq('id', currentUser.mitarbeiterId);
+                
+                if (error) throw error;
+                
+                // Update header avatar
+                await updateHeaderAvatar();
+            }
+            
+            document.getElementById('meinProfilDialog').classList.remove('show');
+            
+        } catch (error) {
+            console.error('Error saving:', error);
+            alert('❌ Fehler beim Speichern: ' + error.message);
+        }
     }
 
     async function handleProfilFotoChange(event) {
@@ -5258,62 +5333,36 @@
         try {
             // Convert to base64
             const reader = new FileReader();
-            reader.onload = async (e) => {
+            reader.onload = (e) => {
                 const base64 = e.target.result;
                 
-                // Update in database
-                const { error } = await supabaseClient
-                    .from('mitarbeiter')
-                    .update({ foto: base64 })
-                    .eq('id', currentUser.mitarbeiterId);
-                
-                if (error) throw error;
+                // Store temporarily - don't save yet!
+                tempFotoData = base64;
                 
                 // Update preview
                 const preview = document.getElementById('profilFotoPreview');
                 preview.innerHTML = `<img src="${base64}" style="width: 100%; height: 100%; object-fit: cover;">`;
                 document.getElementById('btnRemoveFoto').style.display = 'inline-block';
-                
-                // Update header avatar
-                updateHeaderAvatar();
             };
             reader.readAsDataURL(file);
             
         } catch (error) {
-            console.error('Error uploading foto:', error);
-            alert('❌ Fehler beim Hochladen: ' + error.message);
+            console.error('Error loading foto:', error);
+            alert('❌ Fehler beim Laden: ' + error.message);
         }
     }
 
-    async function removeProfilFoto() {
+    function removeProfilFoto() {
         if (!confirm('Foto wirklich entfernen?')) return;
         
-        if (!currentUser.mitarbeiterId) {
-            alert('⚠️ Kein Mitarbeiter-Eintrag gefunden');
-            return;
-        }
+        // Set temp data to null (will be saved on Save)
+        tempFotoData = null;
         
-        try {
-            const { error } = await supabaseClient
-                .from('mitarbeiter')
-                .update({ foto: null })
-                .eq('id', currentUser.mitarbeiterId);
-            
-            if (error) throw error;
-            
-            // Reset preview
-            const preview = document.getElementById('profilFotoPreview');
-            preview.innerHTML = getInitials(currentUser.name);
-            preview.style.background = 'var(--primary)';
-            document.getElementById('btnRemoveFoto').style.display = 'none';
-            
-            // Update header avatar
-            updateHeaderAvatar();
-            
-        } catch (error) {
-            console.error('Error removing foto:', error);
-            alert('❌ Fehler: ' + error.message);
-        }
+        // Reset preview
+        const preview = document.getElementById('profilFotoPreview');
+        preview.innerHTML = getInitials(currentUser.name);
+        preview.style.background = 'var(--primary)';
+        document.getElementById('btnRemoveFoto').style.display = 'none';
     }
 
     async function updateHeaderAvatar() {

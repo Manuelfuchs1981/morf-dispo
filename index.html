@@ -723,6 +723,10 @@
             overflow: hidden;
         }
 
+        .data-card.calendar-card {
+            overflow: visible;
+        }
+
         /* Table */
         .data-table {
             width: 100%;
@@ -1014,8 +1018,8 @@
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
             z-index: 10000;
-            min-width: 150px;
-            padding: 8px;
+            min-width: 120px;
+            padding: 6px;
         }
 
         .filter-dropdown.show {
@@ -1025,24 +1029,86 @@
         .filter-option {
             display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 6px 8px;
+            gap: 6px;
+            padding: 3px 6px;
             cursor: pointer;
-            font-size: 13px;
-            border-radius: 4px;
-            transition: all 0.2s;
+            font-size: 11px;
+            font-weight: 400;
+            border-radius: 3px;
+            transition: all 0.15s;
             user-select: none;
         }
 
         .filter-option:hover {
-            background: var(--bg-light);
+            background: #f3f4f6;
         }
 
         .filter-option input[type="checkbox"] {
             cursor: pointer;
-            width: 16px;
-            height: 16px;
-            accent-color: var(--accent);
+            width: 13px;
+            height: 13px;
+            accent-color: #6b7280;
+            border: 1px solid #d1d5db;
+        }
+
+        .filter-option:first-child {
+            font-weight: 500;
+            border-bottom: 1px solid #e5e7eb;
+            margin-bottom: 2px;
+            padding-bottom: 6px;
+        }
+
+        .dropdown-container {
+            position: relative;
+        }
+
+        .abwesenheit-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 4px;
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            min-width: 200px;
+            overflow: hidden;
+        }
+
+        .abwesenheit-dropdown.show {
+            display: block;
+        }
+
+        .dropdown-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            transition: all 0.2s;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-item:hover {
+            background: var(--bg-light);
+        }
+
+        .filter-dropdown {
+            display: none;
+            position: absolute;
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 10000;
+            min-width: 120px;
+            padding: 6px;
         }
 
         .absence-legend {
@@ -1197,6 +1263,46 @@
         .absence-ft { background: #E9D5FF; color: #6b21a8; } /* Helllila */
         .absence-arb { background: #D1FAE5; color: #065f46; } /* Hellgrün (dunkel) */
 
+        /* Diagonal split for BF/FT + ARB */
+        .absence-badge-split {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .absence-split-left {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 10px;
+            clip-path: polygon(0 0, 100% 0, 0 100%);
+        }
+
+        .absence-split-right {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            clip-path: polygon(100% 0, 100% 100%, 0 100%);
+        }
+
+        /* White diagonal divider line */
+        .absence-badge-split::after {
+            content: '';
+            position: absolute;
+            top: -1px;
+            left: -1px;
+            right: -1px;
+            bottom: -1px;
+            background: linear-gradient(to bottom right, transparent 49%, white 49%, white 51%, transparent 51%);
+            pointer-events: none;
+        }
+
         /* Utilities */
         .hidden {
             display: none !important;
@@ -1296,6 +1402,10 @@
                             <div class="dropdown-user-role" id="dropdownUserRole">AD - Administrator</div>
                         </div>
                         <div class="dropdown-menu">
+                            <button class="dropdown-item" onclick="openMeinProfil()">
+                                <span class="dropdown-icon">👤</span>
+                                <span>Mein Profil</span>
+                            </button>
                             <button class="dropdown-item" onclick="openSettings()">
                                 <span class="dropdown-icon">⚙️</span>
                                 <span>Kontoeinstellungen</span>
@@ -1439,10 +1549,31 @@
                         <button class="btn btn-secondary btn-compact" onclick="kalenderHeute()">
                             Heute
                         </button>
-                        <button class="btn btn-primary btn-compact" id="btnAddAbwesenheit" onclick="openAbwesenheitDialog()" style="display: none;">
-                            <span style="font-size: 16px; margin-right: 4px;">+</span>
-                            Neue Abwesenheit
-                        </button>
+                        <div class="dropdown-container" id="btnAddAbwesenheit" style="display: none; position: relative;">
+                            <button class="btn btn-primary btn-compact" onclick="toggleAbwesenheitDropdown(event)">
+                                <span style="font-size: 16px; margin-right: 4px;">+</span>
+                                Neue Abwesenheit
+                                <span style="margin-left: 4px;">▼</span>
+                            </button>
+                            <div class="abwesenheit-dropdown" id="abwesenheitDropdown">
+                                <div class="dropdown-item" onclick="openAbwesenheitDialog(); closeAbwesenheitDropdown();">
+                                    <span style="font-size: 16px; margin-right: 8px;">👤</span>
+                                    Einzelne Abwesenheit
+                                </div>
+                                <div class="dropdown-item" id="dropdownBetriebsferien" onclick="openBetriebsferienDialog(); closeAbwesenheitDropdown();" style="display: none;">
+                                    <span style="font-size: 16px; margin-right: 8px;">🏢</span>
+                                    Betriebsferien
+                                </div>
+                                <div class="dropdown-item" id="dropdownFeiertage" onclick="openFeiertagDialog(); closeAbwesenheitDropdown();" style="display: none;">
+                                    <span style="font-size: 16px; margin-right: 8px;">🎉</span>
+                                    Feiertage
+                                </div>
+                                <div class="dropdown-item" id="dropdownBfFtLoeschen" onclick="openLoeschenDialog(); closeAbwesenheitDropdown();" style="border-top: 1px solid var(--border); color: var(--danger); display: none;">
+                                    <span style="font-size: 16px; margin-right: 8px;">🗑️</span>
+                                    BF/FT verwalten
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1464,8 +1595,8 @@
                 </div>
 
                 <!-- Calendar Matrix -->
-                <div class="data-card" style="position: relative;">
-                    <div id="kalenderMatrixContainer" style="overflow-x: auto;">
+                <div class="data-card calendar-card" style="position: relative;">
+                    <div id="kalenderMatrixContainer" style="overflow-x: auto; overflow-y: visible;">
                         <!-- Will be loaded dynamically -->
                     </div>
                     
@@ -1652,6 +1783,9 @@
             document.getElementById('userAvatar').textContent = initials;
             document.getElementById('dropdownUserName').textContent = currentUser.name;
             
+            // Load avatar foto
+            updateHeaderAvatar();
+            
             let roleDisplay = getRoleDisplayName(currentUser.role);
             if (currentUser.isStellvertreter) {
                 roleDisplay += ' (Admin-Stellvertreter)';
@@ -1819,6 +1953,10 @@
         let allAbwesenheiten = [];
 
         async function loadKalender() {
+            // Reset filters to default (all selected)
+            selectedFunktionen = ['EC', 'MA', 'DP', 'TKB', 'FL', 'VW', 'BO'];
+            selectedFilialen = ['AG', 'BO', 'GL', 'GR', 'SG', 'VW', 'ZH', 'ZS'];
+            
             try {
                 // Load mitarbeiter if not loaded yet
                 if (allMitarbeiter.length === 0) {
@@ -1929,27 +2067,60 @@
 
         function toggleAllFunktion(checkbox) {
             if (checkbox.checked) {
-                // Activate all
+                // When "Alle" gets checked → Activate all
                 selectedFunktionen = ['EC', 'MA', 'DP', 'TKB', 'FL', 'VW', 'BO'];
+                // Immediately update visual checkboxes
+                document.querySelectorAll('.funktion-checkbox').forEach(cb => {
+                    cb.checked = true;
+                });
             } else {
-                // Deactivate all
+                // When "Alle" gets unchecked → Deactivate all
                 selectedFunktionen = [];
+                // Immediately update visual checkboxes
+                document.querySelectorAll('.funktion-checkbox').forEach(cb => {
+                    cb.checked = false;
+                });
             }
             filterKalender();
-            // Don't close dropdown - keep it open
         }
 
         function toggleAllFiliale(checkbox) {
             if (checkbox.checked) {
-                // Activate all
+                // When "Alle" gets checked → Activate all
                 selectedFilialen = ['AG', 'BO', 'GL', 'GR', 'SG', 'VW', 'ZH', 'ZS'];
+                // Immediately update visual checkboxes
+                document.querySelectorAll('.filiale-checkbox').forEach(cb => {
+                    cb.checked = true;
+                });
             } else {
-                // Deactivate all
+                // When "Alle" gets unchecked → Deactivate all
                 selectedFilialen = [];
+                // Immediately update visual checkboxes
+                document.querySelectorAll('.filiale-checkbox').forEach(cb => {
+                    cb.checked = false;
+                });
             }
             filterKalender();
-            // Don't close dropdown - keep it open
         }
+
+        function toggleAbwesenheitDropdown(event) {
+            event.stopPropagation();
+            const dropdown = document.getElementById('abwesenheitDropdown');
+            dropdown.classList.toggle('show');
+        }
+
+        function closeAbwesenheitDropdown() {
+            document.getElementById('abwesenheitDropdown').classList.remove('show');
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('abwesenheitDropdown');
+            const container = event.target.closest('.dropdown-container');
+            if (!container && dropdown) {
+                dropdown.classList.remove('show');
+            }
+        });
 
         // Close dropdowns when clicking outside
         document.addEventListener('click', function(event) {
@@ -2016,16 +2187,7 @@
             // Sort by name
             const activeEmployees = filteredEmployees.sort((a, b) => a.nachname.localeCompare(b.nachname));
 
-            if (activeEmployees.length === 0) {
-                // Still show header with filters even when no employees
-                html += '</tr></thead><tbody>';
-                html += '<tr><td colspan="100%" style="padding: 40px; text-align: center; color: var(--text-gray);">Keine Mitarbeiter mit den gewählten Filtern gefunden</td></tr>';
-                html += '</tbody></table>';
-                container.innerHTML = html;
-                return;
-            }
-
-            // Build matrix
+            // Build matrix table header
             let html = '<table class="calendar-matrix"><thead><tr>';
             html += '<th>Mitarbeiter</th>';
             html += `<th style="min-width: 90px;" id="funktionHeader">
@@ -2040,8 +2202,15 @@
             });
             html += '</tr></thead><tbody>';
 
-            // Rows for each employee
-            activeEmployees.forEach(emp => {
+            if (activeEmployees.length === 0) {
+                // Still show header with filters even when no employees
+                html += '<tr><td colspan="100%" style="padding: 40px; text-align: center; color: var(--text-gray);">Keine Mitarbeiter mit den gewählten Filtern gefunden</td></tr>';
+                html += '</tbody></table>';
+                container.innerHTML = html;
+            } else {
+                // Build matrix with employees
+                // Rows for each employee
+                activeEmployees.forEach(emp => {
                 html += `<tr>`;
                 html += `<td>${emp.vorname} ${emp.nachname}</td>`;
                 html += `<td style="text-align: center; background: var(--bg-light);">${emp.funktion || '-'}</td>`;
@@ -2057,11 +2226,21 @@
 
                     // Priority logic
                     let absence = null;
+                    let hasArbWithBfFt = false; // Special case: ARB + BF/FT
+                    
                     if (absences.length > 0) {
-                        // Check for ARB first - it makes employee available
+                        // Check for ARB first
                         const arbEntry = absences.find(a => a.typ === 'ARB');
-                        if (arbEntry) {
-                            absence = null; // ARB overrides - show as available
+                        const bfEntry = absences.find(a => a.typ === 'BF');
+                        const ftEntry = absences.find(a => a.typ === 'FT');
+                        
+                        if (arbEntry && (bfEntry || ftEntry)) {
+                            // Special case: ARB + BF/FT → show both (diagonal)
+                            hasArbWithBfFt = true;
+                            absence = bfEntry || ftEntry; // Use BF/FT for reference
+                        } else if (arbEntry) {
+                            // Only ARB → show as available
+                            absence = null;
                         } else {
                             // Priority order: FT > BF > UF > KR > FE > KO
                             const priorityOrder = ['FT', 'BF', 'UF', 'KR', 'FE', 'KO'];
@@ -2079,7 +2258,15 @@
                     if (d.isWeekend) cellClass += ' weekend';
                     if (d.isToday) cellClass += ' today';
 
-                    if (absence) {
+                    if (hasArbWithBfFt) {
+                        // Diagonal split: BF/FT + ARB (only show BF/FT text)
+                        html += `<td><div class="${cellClass}" onclick="editAbwesenheitFromCell(${emp.id}, '${d.date}')">
+                            <div class="absence-badge-split">
+                                <div class="absence-split-left absence-${absence.typ.toLowerCase()}">${absence.typ}</div>
+                                <div class="absence-split-right absence-arb"></div>
+                            </div>
+                        </div></td>`;
+                    } else if (absence) {
                         html += `<td><div class="${cellClass}" onclick="editAbwesenheitFromCell(${emp.id}, '${d.date}')">
                             <div class="absence-badge absence-${absence.typ.toLowerCase()}">${absence.typ}</div>
                         </div></td>`;
@@ -2091,68 +2278,93 @@
                 html += '</tr>';
             });
 
-            html += '</tbody></table>';
-            container.innerHTML = html;
+                html += '</tbody></table>';
+                container.innerHTML = html;
+            }
             
-            // Populate dropdown containers (outside table)
+            // Always populate dropdown containers (outside table)
             const funktionDropdown = document.getElementById('funktionFilter');
             funktionDropdown.innerHTML = `
                 <label class="filter-option">
-                    <input type="checkbox" id="allesFunktionCheckbox" value="all" onchange="toggleAllFunktion(this)" ${selectedFunktionen.length === 7 ? 'checked' : ''}> Alle
+                    <input type="checkbox" id="allesFunktionCheckbox" value="all" onchange="toggleAllFunktion(this)"> Alle
                 </label>
                 <label class="filter-option">
-                    <input type="checkbox" class="funktion-checkbox" value="EC" onchange="updateFunktionFilter()" ${selectedFunktionen.includes('EC') ? 'checked' : ''}> EC
+                    <input type="checkbox" class="funktion-checkbox" value="EC" onchange="updateFunktionFilter()"> EC
                 </label>
                 <label class="filter-option">
-                    <input type="checkbox" class="funktion-checkbox" value="MA" onchange="updateFunktionFilter()" ${selectedFunktionen.includes('MA') ? 'checked' : ''}> MA
+                    <input type="checkbox" class="funktion-checkbox" value="MA" onchange="updateFunktionFilter()"> MA
                 </label>
                 <label class="filter-option">
-                    <input type="checkbox" class="funktion-checkbox" value="DP" onchange="updateFunktionFilter()" ${selectedFunktionen.includes('DP') ? 'checked' : ''}> DP
+                    <input type="checkbox" class="funktion-checkbox" value="DP" onchange="updateFunktionFilter()"> DP
                 </label>
                 <label class="filter-option">
-                    <input type="checkbox" class="funktion-checkbox" value="TKB" onchange="updateFunktionFilter()" ${selectedFunktionen.includes('TKB') ? 'checked' : ''}> TKB
+                    <input type="checkbox" class="funktion-checkbox" value="TKB" onchange="updateFunktionFilter()"> TKB
                 </label>
                 <label class="filter-option">
-                    <input type="checkbox" class="funktion-checkbox" value="FL" onchange="updateFunktionFilter()" ${selectedFunktionen.includes('FL') ? 'checked' : ''}> FL
+                    <input type="checkbox" class="funktion-checkbox" value="FL" onchange="updateFunktionFilter()"> FL
                 </label>
                 <label class="filter-option">
-                    <input type="checkbox" class="funktion-checkbox" value="VW" onchange="updateFunktionFilter()" ${selectedFunktionen.includes('VW') ? 'checked' : ''}> VW
+                    <input type="checkbox" class="funktion-checkbox" value="VW" onchange="updateFunktionFilter()"> VW
                 </label>
                 <label class="filter-option">
-                    <input type="checkbox" class="funktion-checkbox" value="BO" onchange="updateFunktionFilter()" ${selectedFunktionen.includes('BO') ? 'checked' : ''}> BO
+                    <input type="checkbox" class="funktion-checkbox" value="BO" onchange="updateFunktionFilter()"> BO
                 </label>
             `;
+            
+            // Now programmatically set checked states
+            setTimeout(() => {
+                const alleFunktionCb = document.getElementById('allesFunktionCheckbox');
+                if (alleFunktionCb) {
+                    alleFunktionCb.checked = selectedFunktionen.length === 7;
+                    console.log('Alle Funktion checkbox set to:', alleFunktionCb.checked, 'selectedFunktionen:', selectedFunktionen);
+                }
+                document.querySelectorAll('.funktion-checkbox').forEach(cb => {
+                    cb.checked = selectedFunktionen.includes(cb.value);
+                });
+            }, 0);
             
             const filialeDropdown = document.getElementById('filialeFilter');
             filialeDropdown.innerHTML = `
                 <label class="filter-option">
-                    <input type="checkbox" id="allesFilialeCheckbox" value="all" onchange="toggleAllFiliale(this)" ${selectedFilialen.length === 8 ? 'checked' : ''}> Alle
+                    <input type="checkbox" id="allesFilialeCheckbox" value="all" onchange="toggleAllFiliale(this)"> Alle
                 </label>
                 <label class="filter-option">
-                    <input type="checkbox" class="filiale-checkbox" value="AG" onchange="updateFilialeFilter()" ${selectedFilialen.includes('AG') ? 'checked' : ''}> AG
+                    <input type="checkbox" class="filiale-checkbox" value="AG" onchange="updateFilialeFilter()"> AG
                 </label>
                 <label class="filter-option">
-                    <input type="checkbox" class="filiale-checkbox" value="BO" onchange="updateFilialeFilter()" ${selectedFilialen.includes('BO') ? 'checked' : ''}> BO
+                    <input type="checkbox" class="filiale-checkbox" value="BO" onchange="updateFilialeFilter()"> BO
                 </label>
                 <label class="filter-option">
-                    <input type="checkbox" class="filiale-checkbox" value="GL" onchange="updateFilialeFilter()" ${selectedFilialen.includes('GL') ? 'checked' : ''}> GL
+                    <input type="checkbox" class="filiale-checkbox" value="GL" onchange="updateFilialeFilter()"> GL
                 </label>
                 <label class="filter-option">
-                    <input type="checkbox" class="filiale-checkbox" value="GR" onchange="updateFilialeFilter()" ${selectedFilialen.includes('GR') ? 'checked' : ''}> GR
+                    <input type="checkbox" class="filiale-checkbox" value="GR" onchange="updateFilialeFilter()"> GR
                 </label>
                 <label class="filter-option">
-                    <input type="checkbox" class="filiale-checkbox" value="SG" onchange="updateFilialeFilter()" ${selectedFilialen.includes('SG') ? 'checked' : ''}> SG
+                    <input type="checkbox" class="filiale-checkbox" value="SG" onchange="updateFilialeFilter()"> SG
                 </label>
                 <label class="filter-option">
-                    <input type="checkbox" class="filiale-checkbox" value="VW" onchange="updateFilialeFilter()" ${selectedFilialen.includes('VW') ? 'checked' : ''}> VW
+                    <input type="checkbox" class="filiale-checkbox" value="VW" onchange="updateFilialeFilter()"> VW
                 </label>
                 <label class="filter-option">
-                    <input type="checkbox" class="filiale-checkbox" value="ZH" onchange="updateFilialeFilter()" ${selectedFilialen.includes('ZH') ? 'checked' : ''}> ZH
+                    <input type="checkbox" class="filiale-checkbox" value="ZH" onchange="updateFilialeFilter()"> ZH
                 </label>
                 <label class="filter-option">
-                    <input type="checkbox" class="filiale-checkbox" value="ZS" onchange="updateFilialeFilter()" ${selectedFilialen.includes('ZS') ? 'checked' : ''}> ZS
+                    <input type="checkbox" class="filiale-checkbox" value="ZS" onchange="updateFilialeFilter()"> ZS
                 </label>
             `;
+            
+            // Now programmatically set checked states
+            setTimeout(() => {
+                const alleFilialeCb = document.getElementById('allesFilialeCheckbox');
+                if (alleFilialeCb) {
+                    alleFilialeCb.checked = selectedFilialen.length === 8;
+                    console.log('Alle Filiale checkbox set to:', alleFilialeCb.checked, 'selectedFilialen:', selectedFilialen);
+                }
+                document.querySelectorAll('.filiale-checkbox').forEach(cb => {
+                    cb.checked = selectedFilialen.includes(cb.value);
+                });
+            }, 0);
             
             // Re-open and position dropdown if it was open
             if (openDropdownId) {
@@ -2204,6 +2416,162 @@
             document.getElementById('abwesenheitDialog').classList.remove('show');
         }
 
+        function openBetriebsferienDialog() {
+            if (!canManageBfFt()) {
+                alert('⛔ Keine Berechtigung für Betriebsferien');
+                return;
+            }
+            if (!canEditCalendar()) {
+                alert('⛔ Keine Berechtigung zum Erstellen von Betriebsferien');
+                return;
+            }
+            
+            document.getElementById('betriebsferienForm').reset();
+            document.getElementById('bfMitarbeiterCount').textContent = 'Keine Mitarbeiter ausgewählt';
+            document.getElementById('betriebsferienDialog').classList.add('show');
+        }
+
+        function closeBetriebsferienDialog() {
+            document.getElementById('betriebsferienDialog').classList.remove('show');
+        }
+
+        function calculateBfTage() {
+            const von = document.getElementById('inputBfVon').value;
+            const bis = document.getElementById('inputBfBis').value;
+            
+            if (von && bis) {
+                const start = new Date(von);
+                const end = new Date(bis);
+                const diffTime = Math.abs(end - start);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                document.getElementById('inputBfTage').value = diffDays + ' Tage';
+            }
+        }
+
+        function onBfVonChange() {
+            const von = document.getElementById('inputBfVon').value;
+            const bisField = document.getElementById('inputBfBis');
+            
+            if (von) {
+                // Set min date for "Bis" to be same or after "Von"
+                bisField.min = von;
+                
+                // If Bis is before Von, clear it
+                if (bisField.value && bisField.value < von) {
+                    bisField.value = '';
+                }
+            }
+            
+            calculateBfTage();
+        }
+
+        function updateBfCount() {
+            const verwaltung = document.getElementById('bfVerwaltung').checked;
+            const filialen = document.getElementById('bfFilialen').checked;
+            
+            let count = 0;
+            let text = '';
+            
+            if (verwaltung || filialen) {
+                const filtered = allMitarbeiter.filter(m => {
+                    if (!m.aktiv) return false;
+                    if (verwaltung && m.filiale === 'VW') return true;
+                    if (filialen && m.filiale !== 'VW') return true;
+                    return false;
+                });
+                
+                count = filtered.length;
+                
+                if (verwaltung && filialen) {
+                    text = `${count} Mitarbeiter (Verwaltung + alle Filialen)`;
+                } else if (verwaltung) {
+                    text = `${count} Mitarbeiter (nur Verwaltung)`;
+                } else {
+                    text = `${count} Mitarbeiter (nur Filialbetriebe)`;
+                }
+            } else {
+                text = 'Keine Mitarbeiter ausgewählt';
+            }
+            
+            document.getElementById('bfMitarbeiterCount').textContent = text;
+        }
+
+        async function saveBetriebsferien(event) {
+            event.preventDefault();
+            
+            const von = document.getElementById('inputBfVon').value;
+            const bis = document.getElementById('inputBfBis').value;
+            const verwaltung = document.getElementById('bfVerwaltung').checked;
+            const filialen = document.getElementById('bfFilialen').checked;
+            
+            if (!verwaltung && !filialen) {
+                alert('⚠️ Bitte wählen Sie mindestens eine Gruppe aus (Verwaltung oder Filialbetriebe)');
+                return;
+            }
+            
+            // Get affected employees
+            const affectedEmployees = allMitarbeiter.filter(m => {
+                if (!m.aktiv) return false;
+                if (verwaltung && m.filiale === 'VW') return true;
+                if (filialen && m.filiale !== 'VW') return true;
+                return false;
+            });
+            
+            if (affectedEmployees.length === 0) {
+                alert('⚠️ Keine aktiven Mitarbeiter gefunden');
+                return;
+            }
+            
+            // Validate that all employees have valid IDs
+            const invalidEmployees = affectedEmployees.filter(emp => !emp.id);
+            if (invalidEmployees.length > 0) {
+                alert('❌ Fehler: Einige Mitarbeiter haben keine gültige ID');
+                console.error('Invalid employees:', invalidEmployees);
+                return;
+            }
+            
+            // Confirm
+            const confirmText = `Betriebsferien erstellen für ${affectedEmployees.length} Mitarbeiter vom ${von} bis ${bis}?`;
+            if (!confirm(confirmText)) return;
+            
+            try {
+                // Calculate days
+                const start = new Date(von);
+                const end = new Date(bis);
+                const diffTime = Math.abs(end - start);
+                const tage = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                
+                // Create BF entries for all affected employees
+                const entries = affectedEmployees.map(emp => ({
+                    mitarbeiter_id: emp.id,
+                    typ: 'BF',
+                    von: von,
+                    bis: bis,
+                    tage: tage
+                }));
+                
+                console.log('Inserting BF entries:', entries);
+                
+                // Use array syntax like normal abwesenheit insert
+                const { data, error } = await supabaseClient
+                    .from('abwesenheits_perioden')
+                    .insert(entries);
+                
+                if (error) {
+                    console.error('Supabase error:', error);
+                    throw error;
+                }
+                
+                console.log('Insert successful, count:', entries.length);
+                closeBetriebsferienDialog();
+                loadKalender();
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('❌ Fehler beim Erstellen der Betriebsferien: ' + error.message);
+            }
+        }
+
         async function editAbwesenheitFromCell(mitarbeiterId, date) {
             if (!canEditCalendar()) {
                 return;
@@ -2236,14 +2604,18 @@
 
             if (!absence) return;
 
-            // Check if BF or FT - make read-only
+            // Check if BF (Betriebsferien) or FT (Feiertag) - make read-only
             const isProtected = absence.typ === 'BF' || absence.typ === 'FT';
 
             // Store the clicked date for deletion
             document.getElementById('clickedDate').value = date;
 
             // Load into dialog
-            document.getElementById('abwesenheitDialogTitle').textContent = isProtected ? 'Abwesenheit (nur lesen)' : 'Abwesenheit bearbeiten';
+            let title = 'Abwesenheit bearbeiten';
+            if (absence.typ === 'BF') title = 'Betriebsferien (geschützt)';
+            if (absence.typ === 'FT') title = 'Feiertag (geschützt)';
+            
+            document.getElementById('abwesenheitDialogTitle').textContent = title;
             document.getElementById('editAbwesenheitId').value = absence.id;
             document.getElementById('inputAbwMitarbeiter').value = absence.mitarbeiter_id;
             document.getElementById('inputAbwTyp').value = absence.typ;
@@ -2251,13 +2623,15 @@
             document.getElementById('inputAbwBis').value = absence.bis;
             calculateAbwTage();
 
-            // Hide delete button for BF and FT, show for others
+            // Hide delete button for BF/FT
             document.getElementById('btnDeleteAbwesenheit').style.display = isProtected ? 'none' : 'block';
+            
+            // Show "Kann arbeiten" button for BF/FT
+            document.getElementById('btnKannArbeiten').style.display = isProtected ? 'block' : 'none';
 
-            // For non-protected types, allow editing dates to specify what to delete
-            // But keep mitarbeiter and typ readonly (can't change those)
+            // Make BF/FT readonly
             document.getElementById('inputAbwMitarbeiter').disabled = true;
-            document.getElementById('inputAbwTyp').disabled = true;
+            document.getElementById('inputAbwTyp').disabled = isProtected;
             document.getElementById('inputAbwVon').disabled = isProtected;
             document.getElementById('inputAbwBis').disabled = isProtected;
 
@@ -2288,6 +2662,23 @@
             } else {
                 document.getElementById('inputAbwTage').value = '';
             }
+        }
+
+        function onAbwVonChange() {
+            const von = document.getElementById('inputAbwVon').value;
+            const bisField = document.getElementById('inputAbwBis');
+            
+            if (von) {
+                // Set min date for "Bis" to be same or after "Von"
+                bisField.min = von;
+                
+                // If Bis is before Von, clear it
+                if (bisField.value && bisField.value < von) {
+                    bisField.value = '';
+                }
+            }
+            
+            calculateAbwTage();
         }
 
         async function saveAbwesenheit(event) {
@@ -2372,6 +2763,621 @@
             }
         }
 
+        function kannArbeiten() {
+            const mitarbeiterId = parseInt(document.getElementById('inputAbwMitarbeiter').value);
+            const bfVon = document.getElementById('inputAbwVon').value;
+            const bfBis = document.getElementById('inputAbwBis').value;
+            const typ = document.getElementById('inputAbwTyp').value;
+            
+            const typeName = typ === 'BF' ? 'Betriebsferien' : 'Feiertag';
+            
+            // Open dialog
+            document.getElementById('kannArbTypName').textContent = typeName;
+            document.getElementById('kannArbInfo').textContent = `${typeName}-Zeitraum: ${bfVon} bis ${bfBis}`;
+            document.getElementById('kannArbMitarbeiterId').value = mitarbeiterId;
+            document.getElementById('kannArbOriginalVon').value = bfVon;
+            document.getElementById('kannArbOriginalBis').value = bfBis;
+            
+            // Pre-fill with BF dates
+            document.getElementById('inputKannVon').value = bfVon;
+            document.getElementById('inputKannVon').min = bfVon;
+            document.getElementById('inputKannVon').max = bfBis;
+            
+            document.getElementById('inputKannBis').value = bfBis;
+            document.getElementById('inputKannBis').min = bfVon;
+            document.getElementById('inputKannBis').max = bfBis;
+            
+            calculateKannTage();
+            
+            document.getElementById('kannArbeitenDialog').classList.add('show');
+        }
+
+        function closeKannArbeitenDialog() {
+            document.getElementById('kannArbeitenDialog').classList.remove('show');
+        }
+
+        function openLoeschenDialog() {
+            if (!canManageBfFt()) {
+                alert('⛔ Keine Berechtigung zum Verwalten');
+                return;
+            }
+            if (!canEditCalendar()) {
+                alert('⛔ Keine Berechtigung zum Verwalten');
+                return;
+            }
+            
+            document.getElementById('inputVerwaltenTyp').value = '';
+            document.getElementById('bfFtListContainer').style.display = 'none';
+            document.getElementById('loeschenDialog').classList.add('show');
+        }
+
+        function closeLoeschenDialog() {
+            document.getElementById('loeschenDialog').classList.remove('show');
+        }
+
+        function loadBfFtList() {
+            const typ = document.getElementById('inputVerwaltenTyp').value;
+            
+            if (!typ) {
+                document.getElementById('bfFtListContainer').style.display = 'none';
+                return;
+            }
+            
+            const typName = typ === 'BF' ? 'Betriebsferien' : 'Feiertage';
+            const today = new Date().toISOString().split('T')[0];
+            
+            // Get all future entries of this type
+            const futureEntries = allAbwesenheiten.filter(a => 
+                a.typ === typ && a.von >= today
+            );
+            
+            if (futureEntries.length === 0) {
+                document.getElementById('bfFtList').innerHTML = `
+                    <p style="text-align: center; padding: 40px; color: var(--text-gray);">
+                        Keine zukünftigen ${typName} gefunden
+                    </p>
+                `;
+                document.getElementById('bfFtListContainer').style.display = 'block';
+                return;
+            }
+            
+            // Group by date pattern (MM-DD) to detect recurring
+            const patterns = {};
+            futureEntries.forEach(entry => {
+                const vonParts = entry.von.split('-');
+                const bisParts = entry.bis.split('-');
+                const pattern = `${vonParts[1]}-${vonParts[2]}_${bisParts[1]}-${bisParts[2]}`;
+                
+                if (!patterns[pattern]) {
+                    patterns[pattern] = {
+                        monthDay: `${vonParts[2]}.${vonParts[1]}`,
+                        monthDayBis: `${bisParts[2]}.${bisParts[1]}`,
+                        years: {},
+                        entries: []
+                    };
+                }
+                
+                const year = vonParts[0];
+                if (!patterns[pattern].years[year]) {
+                    patterns[pattern].years[year] = [];
+                }
+                patterns[pattern].years[year].push(entry);
+                patterns[pattern].entries.push(entry);
+            });
+            
+            // Build HTML - group recurring vs single
+            let html = '';
+            
+            Object.entries(patterns).forEach(([pattern, data]) => {
+                const yearList = Object.keys(data.years).sort();
+                const isRecurring = yearList.length > 1;
+                const mitarbeiterCount = data.years[yearList[0]].length;
+                
+                if (isRecurring) {
+                    // Recurring entry - show once with year range
+                    const yearRange = `${yearList[0]} - ${yearList[yearList.length - 1]}`;
+                    const totalEntries = data.entries.length;
+                    
+                    html += `
+                        <div style="padding: 12px; margin-bottom: 8px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                                <div>
+                                    <strong>🔁 ${data.monthDay} - ${data.monthDayBis}</strong>
+                                    <br>
+                                    <small style="color: var(--text-gray);">
+                                        ${mitarbeiterCount} Mitarbeiter × ${yearList.length} Jahre (${yearRange})
+                                        <br>
+                                        Insgesamt ${totalEntries} Einträge
+                                    </small>
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 13px;" 
+                                            onclick='editBfFtGroup(${JSON.stringify(data.entries)})'>
+                                        ✏️ Bearbeiten
+                                    </button>
+                                    <button class="btn" style="background: var(--danger); color: white; padding: 6px 12px; font-size: 13px;" 
+                                            onclick='deleteBfFtRecurring(${JSON.stringify(data.entries)}, "${typ}", "${data.monthDay} - ${data.monthDayBis}")'>
+                                        🗑️ Alle löschen
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // Single entry
+                    const year = yearList[0];
+                    const entries = data.years[year];
+                    
+                    html += `
+                        <div style="padding: 12px; margin-bottom: 8px; background: var(--bg-light); border-radius: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <strong>${entries[0].von} - ${entries[0].bis}</strong>
+                                    <br>
+                                    <small style="color: var(--text-gray);">${mitarbeiterCount} Mitarbeiter</small>
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 13px;" 
+                                            onclick='editBfFtGroup(${JSON.stringify(entries)})'>
+                                        ✏️ Bearbeiten
+                                    </button>
+                                    <button class="btn" style="background: var(--danger); color: white; padding: 6px 12px; font-size: 13px;" 
+                                            onclick="deleteBfFtGroup('${typ}', '${entries[0].von}', '${entries[0].bis}', ${mitarbeiterCount})">
+                                        🗑️ Löschen
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            
+            document.getElementById('bfFtList').innerHTML = html;
+            document.getElementById('bfFtListContainer').style.display = 'block';
+        }
+
+        function editBfFtGroup(entries) {
+            const first = entries[0];
+            const uniqueYears = [...new Set(entries.map(e => e.von.split('-')[0]))].sort();
+            const isRecurring = uniqueYears.length > 1;
+            
+            // Get which filialen are actually in the entries
+            const filialeMap = {};
+            entries.forEach(e => {
+                const emp = allMitarbeiter.find(m => parseInt(m.id) === parseInt(e.mitarbeiter_id));
+                if (emp && emp.filiale) {
+                    filialeMap[emp.filiale] = true;
+                }
+            });
+            let activeFilialen = Object.keys(filialeMap);
+            
+            // Smart detection: If 7+ filialen present, assume all were selected
+            // (some filialen might just have no employees)
+            const allPossibleFilialen = ['VW', 'AG', 'BO', 'GL', 'GR', 'SG', 'ZH', 'ZS'];
+            if (activeFilialen.length >= 7) {
+                activeFilialen = allPossibleFilialen;
+            }
+            
+            console.log('=== EDIT DEBUG ===');
+            console.log('Total entries:', entries.length);
+            console.log('Total mitarbeiter:', allMitarbeiter.length);
+            console.log('Filialen with employees:', Object.keys(filialeMap));
+            console.log('Active filialen (after smart detection):', activeFilialen);
+            
+            // Set title
+            if (isRecurring) {
+                document.getElementById('editBfFtTitle').textContent = `🔁 Jährlich bearbeiten`;
+            } else {
+                document.getElementById('editBfFtTitle').textContent = 'Eintrag bearbeiten';
+            }
+            
+            // Fill form
+            document.getElementById('inputEditVon').value = first.von;
+            document.getElementById('inputEditBis').value = first.bis;
+            document.getElementById('editBfFtEntries').value = JSON.stringify(entries);
+            document.getElementById('editBfFtTyp').value = first.typ;
+            document.getElementById('editBfFtIsRecurring').value = isRecurring;
+            
+            // Set filialen checkboxes - CHECK if filiale IS in entries
+            document.querySelectorAll('.edit-filiale-checkbox').forEach(cb => {
+                const shouldCheck = activeFilialen.includes(cb.value);
+                cb.checked = shouldCheck;
+                console.log(`Checkbox ${cb.value}: ${shouldCheck}`);
+            });
+            
+            document.getElementById('editBfFtDialog').classList.add('show');
+        }
+
+        function closeEditBfFtDialog() {
+            document.getElementById('editBfFtDialog').classList.remove('show');
+        }
+
+        async function saveEditBfFt(event) {
+            event.preventDefault();
+            
+            const entries = JSON.parse(document.getElementById('editBfFtEntries').value);
+            const typ = document.getElementById('editBfFtTyp').value;
+            const isRecurring = document.getElementById('editBfFtIsRecurring').value === 'true';
+            const newVon = document.getElementById('inputEditVon').value;
+            const newBis = document.getElementById('inputEditBis').value;
+            const newFilialen = Array.from(document.querySelectorAll('.edit-filiale-checkbox:checked')).map(cb => cb.value);
+            
+            if (newFilialen.length === 0) {
+                alert('⚠️ Bitte wählen Sie mindestens eine Filiale aus');
+                return;
+            }
+            
+            const typName = typ === 'BF' ? 'Betriebsferien' : 'Feiertag';
+            
+            // Get old filialen
+            const oldFilialeMap = {};
+            entries.forEach(e => {
+                const emp = allMitarbeiter.find(m => m.id === e.mitarbeiter_id);
+                if (emp) oldFilialeMap[emp.filiale] = true;
+            });
+            const oldFilialen = Object.keys(oldFilialeMap);
+            
+            // Check what changed
+            const vonParts = entries[0].von.split('-');
+            const newVonParts = newVon.split('-');
+            const dateChanged = vonParts[1] !== newVonParts[1] || vonParts[2] !== newVonParts[2];
+            const filialeChanged = JSON.stringify(oldFilialen.sort()) !== JSON.stringify(newFilialen.sort());
+            
+            if (!dateChanged && !filialeChanged) {
+                alert('⚠️ Keine Änderungen vorgenommen');
+                return;
+            }
+            
+            let confirmText = `${typName} aktualisieren?\n\n`;
+            if (dateChanged) confirmText += `Neues Datum: ${newVon} - ${newBis}\n`;
+            if (filialeChanged) confirmText += `Filialen: ${newFilialen.join(', ')}\n`;
+            
+            if (!confirm(confirmText)) return;
+            
+            try {
+                // Delete old entries
+                const oldIds = entries.map(e => e.id);
+                await supabaseClient
+                    .from('abwesenheits_perioden')
+                    .delete()
+                    .in('id', oldIds);
+                
+                // Get affected employees with new filialen
+                const affectedEmployees = allMitarbeiter.filter(m => 
+                    m.aktiv && newFilialen.includes(m.filiale)
+                );
+                
+                // Calculate days
+                const start = new Date(newBis);
+                const end = new Date(newVon);
+                const diffTime = Math.abs(start - end);
+                const tage = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                
+                // Create new entries
+                const newEntries = [];
+                
+                if (isRecurring) {
+                    // Recreate for all years
+                    const years = [...new Set(entries.map(e => e.von.split('-')[0]))].sort();
+                    years.forEach(year => {
+                        const yearVon = `${year}-${newVonParts[1]}-${newVonParts[2]}`;
+                        const yearBis = `${year}-${newBis.split('-')[1]}-${newBis.split('-')[2]}`;
+                        
+                        affectedEmployees.forEach(emp => {
+                            newEntries.push({
+                                mitarbeiter_id: emp.id,
+                                typ: typ,
+                                von: yearVon,
+                                bis: yearBis,
+                                tage: tage
+                            });
+                        });
+                    });
+                } else {
+                    // Single entry
+                    affectedEmployees.forEach(emp => {
+                        newEntries.push({
+                            mitarbeiter_id: emp.id,
+                            typ: typ,
+                            von: newVon,
+                            bis: newBis,
+                            tage: tage
+                        });
+                    });
+                }
+                
+                const { error } = await supabaseClient
+                    .from('abwesenheits_perioden')
+                    .insert(newEntries);
+                
+                if (error) throw error;
+                
+                closeEditBfFtDialog();
+                closeLoeschenDialog();
+                await loadKalender();
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('❌ Fehler beim Bearbeiten: ' + error.message);
+            }
+        }
+
+        async function deleteBfFtRecurring(entries, typ, displayName) {
+            const typName = typ === 'BF' ? 'Betriebsferien' : 'Feiertag';
+            
+            const confirmText = `${typName} löschen?\n\n🔁 ${displayName}\n\n⚠️ Dies kann nicht rückgängig gemacht werden!`;
+            if (!confirm(confirmText)) return;
+            
+            try {
+                const ids = entries.map(e => e.id);
+                
+                const { error } = await supabaseClient
+                    .from('abwesenheits_perioden')
+                    .delete()
+                    .in('id', ids);
+                
+                if (error) throw error;
+                
+                await loadKalender();
+                loadBfFtList(); // Refresh list
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('❌ Fehler beim Löschen: ' + error.message);
+            }
+        }
+
+        async function deleteBfFtGroup(typ, von, bis, count) {
+            const typName = typ === 'BF' ? 'Betriebsferien' : 'Feiertag';
+            
+            const confirmText = `${typName} löschen?\n\nZeitraum: ${von} - ${bis}\n\n⚠️ Dies kann nicht rückgängig gemacht werden!`;
+            if (!confirm(confirmText)) return;
+            
+            try {
+                const { error } = await supabaseClient
+                    .from('abwesenheits_perioden')
+                    .delete()
+                    .eq('typ', typ)
+                    .eq('von', von)
+                    .eq('bis', bis);
+                
+                if (error) throw error;
+                
+                await loadKalender();
+                loadBfFtList(); // Refresh list
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('❌ Fehler beim Löschen: ' + error.message);
+            }
+        }
+
+        function openFeiertagDialog() {
+            if (!canManageBfFt()) {
+                alert('⛔ Keine Berechtigung für Feiertage');
+                return;
+            }
+            if (!canEditCalendar()) {
+                alert('⛔ Keine Berechtigung zum Erstellen von Feiertagen');
+                return;
+            }
+            
+            document.getElementById('feiertagForm').reset();
+            
+            // Check all filialen by default
+            document.querySelectorAll('.ft-filiale-checkbox').forEach(cb => cb.checked = true);
+            document.getElementById('ftJaehrlich').checked = false;
+            
+            updateFtCount();
+            document.getElementById('feiertagDialog').classList.add('show');
+        }
+
+        function closeFeiertagDialog() {
+            document.getElementById('feiertagDialog').classList.remove('show');
+        }
+
+        function onFtVonChange() {
+            const von = document.getElementById('inputFtVon').value;
+            const bisField = document.getElementById('inputFtBis');
+            
+            if (von) {
+                bisField.min = von;
+                if (bisField.value && bisField.value < von) {
+                    bisField.value = '';
+                }
+            }
+            
+            calculateFtTage();
+        }
+
+        function calculateFtTage() {
+            const von = document.getElementById('inputFtVon').value;
+            const bis = document.getElementById('inputFtBis').value;
+            
+            if (von && bis) {
+                const start = new Date(von);
+                const end = new Date(bis);
+                const diffTime = Math.abs(end - start);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                document.getElementById('inputFtTage').value = diffDays + ' Tage';
+            }
+        }
+
+        function updateFtCount() {
+            const selectedFilialen = Array.from(document.querySelectorAll('.ft-filiale-checkbox:checked')).map(cb => cb.value);
+            
+            if (selectedFilialen.length === 0) {
+                document.getElementById('ftMitarbeiterCount').textContent = 'Keine Filialen ausgewählt';
+                return;
+            }
+            
+            const filtered = allMitarbeiter.filter(m => {
+                return m.aktiv && selectedFilialen.includes(m.filiale);
+            });
+            
+            const count = filtered.length;
+            const filialeText = selectedFilialen.join(', ');
+            
+            document.getElementById('ftMitarbeiterCount').textContent = `${count} Mitarbeiter (${filialeText})`;
+        }
+
+        async function saveFeiertag(event) {
+            event.preventDefault();
+            
+            const name = document.getElementById('inputFtName').value;
+            const von = document.getElementById('inputFtVon').value;
+            const bis = document.getElementById('inputFtBis').value;
+            const selectedFilialen = Array.from(document.querySelectorAll('.ft-filiale-checkbox:checked')).map(cb => cb.value);
+            const jaehrlich = document.getElementById('ftJaehrlich').checked;
+            
+            if (selectedFilialen.length === 0) {
+                alert('⚠️ Bitte wählen Sie mindestens eine Filiale aus');
+                return;
+            }
+            
+            // Get affected employees
+            const affectedEmployees = allMitarbeiter.filter(m => {
+                return m.aktiv && selectedFilialen.includes(m.filiale);
+            });
+            
+            if (affectedEmployees.length === 0) {
+                alert('⚠️ Keine aktiven Mitarbeiter gefunden');
+                return;
+            }
+            
+            // If yearly, create for 50 years
+            const years = jaehrlich ? 50 : 1;
+            const totalEntries = affectedEmployees.length * years;
+            
+            // Confirm
+            let confirmText = `Feiertag "${name}" erstellen für ${affectedEmployees.length} Mitarbeiter vom ${von} bis ${bis}?`;
+            if (jaehrlich) {
+                confirmText += `\n\n🔁 Jährlich wiederkehrend`;
+            }
+            if (!confirm(confirmText)) return;
+            
+            try {
+                // Calculate days
+                const start = new Date(von);
+                const end = new Date(bis);
+                const diffTime = Math.abs(end - start);
+                const tage = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                
+                // Create FT entries for all affected employees and years
+                const entries = [];
+                
+                for (let year = 0; year < years; year++) {
+                    const yearVon = new Date(von);
+                    yearVon.setFullYear(yearVon.getFullYear() + year);
+                    const yearBis = new Date(bis);
+                    yearBis.setFullYear(yearBis.getFullYear() + year);
+                    
+                    affectedEmployees.forEach(emp => {
+                        entries.push({
+                            mitarbeiter_id: emp.id,
+                            typ: 'FT',
+                            von: yearVon.toISOString().split('T')[0],
+                            bis: yearBis.toISOString().split('T')[0],
+                            tage: tage
+                        });
+                    });
+                }
+                
+                console.log('Inserting FT entries:', entries.length, 'entries');
+                
+                const { data, error } = await supabaseClient
+                    .from('abwesenheits_perioden')
+                    .insert(entries);
+                
+                if (error) {
+                    console.error('Supabase error:', error);
+                    throw error;
+                }
+                
+                console.log('Insert successful');
+                closeFeiertagDialog();
+                loadKalender();
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('❌ Fehler beim Erstellen des Feiertags: ' + error.message);
+            }
+        }
+
+        function onKannVonChange() {
+            const von = document.getElementById('inputKannVon').value;
+            const bisField = document.getElementById('inputKannBis');
+            
+            if (von) {
+                bisField.min = von;
+                if (bisField.value && bisField.value < von) {
+                    bisField.value = '';
+                }
+            }
+            
+            calculateKannTage();
+        }
+
+        function calculateKannTage() {
+            const von = document.getElementById('inputKannVon').value;
+            const bis = document.getElementById('inputKannBis').value;
+            
+            if (von && bis) {
+                const start = new Date(von);
+                const end = new Date(bis);
+                const diffTime = Math.abs(end - start);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                document.getElementById('inputKannTage').value = diffDays + ' Tage';
+            }
+        }
+
+        async function saveKannArbeiten(event) {
+            event.preventDefault();
+            
+            const mitarbeiterId = parseInt(document.getElementById('kannArbMitarbeiterId').value);
+            const von = document.getElementById('inputKannVon').value;
+            const bis = document.getElementById('inputKannBis').value;
+            const originalVon = document.getElementById('kannArbOriginalVon').value;
+            const originalBis = document.getElementById('kannArbOriginalBis').value;
+            
+            // Validate within original range
+            if (von < originalVon || bis > originalBis) {
+                alert(`⚠️ Der gewählte Zeitraum muss innerhalb ${originalVon} - ${originalBis} liegen!`);
+                return;
+            }
+            
+            try {
+                // Calculate days
+                const start = new Date(von);
+                const end = new Date(bis);
+                const diffTime = Math.abs(end - start);
+                const tage = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                
+                // Create ARB entry
+                const arbData = {
+                    mitarbeiter_id: mitarbeiterId,
+                    typ: 'ARB',
+                    von: von,
+                    bis: bis,
+                    tage: tage
+                };
+                
+                const { error } = await supabaseClient
+                    .from('abwesenheits_perioden')
+                    .insert([arbData]);
+                
+                if (error) throw error;
+                
+                closeKannArbeitenDialog();
+                closeAbwesenheitDialog();
+                await loadKalender();
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('❌ Fehler: ' + error.message);
+            }
+        }
+
         async function deleteAbwesenheit() {
             const id = document.getElementById('editAbwesenheitId').value;
             if (!id) return;
@@ -2380,7 +3386,7 @@
             const currentAbsence = allAbwesenheiten.find(a => a.id === parseInt(id));
             if (!currentAbsence) return;
 
-            // Check if BF or FT - prevent deletion
+            // BF (Betriebsferien) and FT (Feiertag) cannot be deleted
             if (currentAbsence.typ === 'BF' || currentAbsence.typ === 'FT') {
                 alert('⛔ Betriebsferien und Feiertage können nicht gelöscht werden!');
                 return;
@@ -2512,6 +3518,17 @@
                     item.style.display = 'none';
                 }
             });
+            
+            // Show/hide BF/FT dropdown items
+            if (canManageBfFt()) {
+                document.getElementById('dropdownBetriebsferien').style.display = 'block';
+                document.getElementById('dropdownFeiertage').style.display = 'block';
+                document.getElementById('dropdownBfFtLoeschen').style.display = 'block';
+            } else {
+                document.getElementById('dropdownBetriebsferien').style.display = 'none';
+                document.getElementById('dropdownFeiertage').style.display = 'none';
+                document.getElementById('dropdownBfFtLoeschen').style.display = 'none';
+            }
         }
 
         // ============================================
@@ -2677,6 +3694,7 @@
                 'canDeletePersonal': { label: 'Personal löschen', icon: '🗑️' },
                 'canViewCalendar': { label: 'Kalender ansehen', icon: '📅' },
                 'canEditCalendar': { label: 'Kalender bearbeiten', icon: '✏️' },
+                'canManageBfFt': { label: 'Betriebsferien/Feiertage verwalten', icon: '🎉' },
                 'canViewAuftraege': { label: 'Aufträge ansehen', icon: '📋' },
                 'canCreateAuftraege': { label: 'Aufträge erstellen', icon: '➕' },
                 'canEditAuftraege': { label: 'Aufträge bearbeiten', icon: '✏️' },
@@ -2813,6 +3831,10 @@
 
         function canEditCalendar() {
             return hasPermission('canEditCalendar');
+        }
+
+        function canManageBfFt() {
+            return hasPermission('canManageBfFt');
         }
 
         function canViewAuftraege() {
@@ -3675,7 +4697,7 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="inputAbwVon">Von (Startdatum) *</label>
-                            <input type="date" id="inputAbwVon" required onchange="calculateAbwTage()">
+                            <input type="date" id="inputAbwVon" required onchange="onAbwVonChange()">
                         </div>
                         <div class="form-group">
                             <label for="inputAbwBis">Bis (Enddatum) *</label>
@@ -3698,8 +4720,325 @@
                         <button type="submit" class="btn btn-primary">
                             Speichern
                         </button>
+                        <button type="button" class="btn" style="background: var(--success); color: white;" id="btnKannArbeiten" onclick="kannArbeiten()" style="display: none;">
+                            ✓ Kann arbeiten
+                        </button>
                         <button type="button" class="btn" style="background: var(--danger); color: white; margin-left: auto;" id="btnDeleteAbwesenheit" onclick="deleteAbwesenheit()" style="display: none;">
                             Löschen
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Betriebsferien Dialog -->
+    <div id="betriebsferienDialog" class="modal">
+        <div class="modal-overlay" onclick="closeBetriebsferienDialog()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Betriebsferien erfassen</h2>
+                <button class="modal-close" onclick="closeBetriebsferienDialog()">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="betriebsferienForm" onsubmit="saveBetriebsferien(event); return false;">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="inputBfVon">Von (Startdatum) *</label>
+                            <input type="date" id="inputBfVon" required onchange="onBfVonChange()">
+                        </div>
+                        <div class="form-group">
+                            <label for="inputBfBis">Bis (Enddatum) *</label>
+                            <input type="date" id="inputBfBis" required onchange="calculateBfTage()">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Anzahl Tage</label>
+                        <input type="text" id="inputBfTage" readonly style="background: var(--bg-light);">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Betrifft *</label>
+                        <div style="display: flex; gap: 20px; padding: 8px 0;">
+                            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 14px;">
+                                <input type="checkbox" id="bfVerwaltung" value="VW" onchange="updateBfCount()" style="width: 16px; height: 16px;">
+                                <span>Verwaltung</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 14px;">
+                                <input type="checkbox" id="bfFilialen" value="filialen" onchange="updateBfCount()" style="width: 16px; height: 16px;">
+                                <span>Filialbetriebe</span>
+                            </label>
+                        </div>
+                        <small id="bfMitarbeiterCount" style="color: var(--text-gray); font-size: 12px; display: block; margin-top: 4px;">
+                            Keine Mitarbeiter ausgewählt
+                        </small>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeBetriebsferienDialog()">
+                            Abbrechen
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            Betriebsferien erstellen
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feiertag Dialog -->
+    <div id="feiertagDialog" class="modal">
+        <div class="modal-overlay" onclick="closeFeiertagDialog()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Feiertage erfassen</h2>
+                <button class="modal-close" onclick="closeFeiertagDialog()">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="feiertagForm" onsubmit="saveFeiertag(event); return false;">
+                    <div class="form-group">
+                        <label for="inputFtName">Name des Feiertags *</label>
+                        <input type="text" id="inputFtName" required placeholder="z.B. Weihnachten, Neujahr, Berchtoldstag">
+                        <small style="color: var(--text-gray); font-size: 12px; display: block; margin-top: 4px;">
+                            Dieser Name wird nur für die Meldung verwendet, nicht gespeichert
+                        </small>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="inputFtVon">Von (Startdatum) *</label>
+                            <input type="date" id="inputFtVon" required onchange="onFtVonChange()">
+                        </div>
+                        <div class="form-group">
+                            <label for="inputFtBis">Bis (Enddatum) *</label>
+                            <input type="date" id="inputFtBis" required onchange="calculateFtTage()">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Anzahl Tage</label>
+                        <input type="text" id="inputFtTage" readonly style="background: var(--bg-light);">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Filialen (abwählen = Feiertag gilt NICHT) *</label>
+                        <div style="padding: 12px; background: var(--bg-light); border-radius: 8px;">
+                            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+                                    <input type="checkbox" class="ft-filiale-checkbox" value="VW" onchange="updateFtCount()" checked style="width: 14px; height: 14px;">
+                                    <span>VW</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+                                    <input type="checkbox" class="ft-filiale-checkbox" value="AG" onchange="updateFtCount()" checked style="width: 14px; height: 14px;">
+                                    <span>AG</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+                                    <input type="checkbox" class="ft-filiale-checkbox" value="BO" onchange="updateFtCount()" checked style="width: 14px; height: 14px;">
+                                    <span>BO</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+                                    <input type="checkbox" class="ft-filiale-checkbox" value="GL" onchange="updateFtCount()" checked style="width: 14px; height: 14px;">
+                                    <span>GL</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+                                    <input type="checkbox" class="ft-filiale-checkbox" value="GR" onchange="updateFtCount()" checked style="width: 14px; height: 14px;">
+                                    <span>GR</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+                                    <input type="checkbox" class="ft-filiale-checkbox" value="SG" onchange="updateFtCount()" checked style="width: 14px; height: 14px;">
+                                    <span>SG</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+                                    <input type="checkbox" class="ft-filiale-checkbox" value="ZH" onchange="updateFtCount()" checked style="width: 14px; height: 14px;">
+                                    <span>ZH</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+                                    <input type="checkbox" class="ft-filiale-checkbox" value="ZS" onchange="updateFtCount()" checked style="width: 14px; height: 14px;">
+                                    <span>ZS</span>
+                                </label>
+                            </div>
+                        </div>
+                        <small id="ftMitarbeiterCount" style="color: var(--text-gray); font-size: 12px; display: block; margin-top: 8px;">
+                            Wird berechnet...
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="ftJaehrlich" style="width: 16px; height: 16px;">
+                            <span>🔁 Jährlich wiederkehrend</span>
+                        </label>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeFeiertagDialog()">
+                            Abbrechen
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            Feiertag erstellen
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- BF/FT Verwaltung Dialog -->
+    <div id="loeschenDialog" class="modal">
+        <div class="modal-overlay" onclick="closeLoeschenDialog()"></div>
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2>Betriebsferien / Feiertage verwalten</h2>
+                <button class="modal-close" onclick="closeLoeschenDialog()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="inputVerwaltenTyp">Typ auswählen *</label>
+                    <select id="inputVerwaltenTyp" onchange="loadBfFtList()">
+                        <option value="">Bitte wählen...</option>
+                        <option value="BF">Betriebsferien (BF)</option>
+                        <option value="FT">Feiertage (FT)</option>
+                    </select>
+                </div>
+
+                <div id="bfFtListContainer" style="display: none;">
+                    <p style="color: var(--text-gray); font-size: 13px; margin-bottom: 12px;">
+                        Zeigt alle zukünftigen Einträge. Jährlich wiederkehrende Feiertage werden zusammengefasst.
+                    </p>
+                    <div id="bfFtList" style="max-height: 400px; overflow-y: auto;">
+                        <!-- Will be populated dynamically -->
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeLoeschenDialog()">
+                        Schließen
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BF/FT Bearbeiten Dialog -->
+    <div id="editBfFtDialog" class="modal">
+        <div class="modal-overlay" onclick="closeEditBfFtDialog()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="editBfFtTitle">Eintrag bearbeiten</h2>
+                <button class="modal-close" onclick="closeEditBfFtDialog()">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="editBfFtForm" onsubmit="saveEditBfFt(event); return false;">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="inputEditVon">Von (Startdatum) *</label>
+                            <input type="date" id="inputEditVon" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="inputEditBis">Bis (Enddatum) *</label>
+                            <input type="date" id="inputEditBis" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Filialen *</label>
+                        <div style="padding: 12px; background: var(--bg-light); border-radius: 8px;">
+                            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+                                    <input type="checkbox" class="edit-filiale-checkbox" value="VW" style="width: 14px; height: 14px;">
+                                    <span>VW</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+                                    <input type="checkbox" class="edit-filiale-checkbox" value="AG" style="width: 14px; height: 14px;">
+                                    <span>AG</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+                                    <input type="checkbox" class="edit-filiale-checkbox" value="BO" style="width: 14px; height: 14px;">
+                                    <span>BO</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+                                    <input type="checkbox" class="edit-filiale-checkbox" value="GL" style="width: 14px; height: 14px;">
+                                    <span>GL</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+                                    <input type="checkbox" class="edit-filiale-checkbox" value="GR" style="width: 14px; height: 14px;">
+                                    <span>GR</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+                                    <input type="checkbox" class="edit-filiale-checkbox" value="SG" style="width: 14px; height: 14px;">
+                                    <span>SG</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+                                    <input type="checkbox" class="edit-filiale-checkbox" value="ZH" style="width: 14px; height: 14px;">
+                                    <span>ZH</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+                                    <input type="checkbox" class="edit-filiale-checkbox" value="ZS" style="width: 14px; height: 14px;">
+                                    <span>ZS</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <input type="hidden" id="editBfFtEntries">
+                    <input type="hidden" id="editBfFtTyp">
+                    <input type="hidden" id="editBfFtIsRecurring">
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeEditBfFtDialog()">
+                            Abbrechen
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            Speichern
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kann Arbeiten Dialog -->
+    <div id="kannArbeitenDialog" class="modal">
+        <div class="modal-overlay" onclick="closeKannArbeitenDialog()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Kann arbeiten während <span id="kannArbTypName"></span></h2>
+                <button class="modal-close" onclick="closeKannArbeitenDialog()">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="kannArbeitenForm" onsubmit="saveKannArbeiten(event); return false;">
+                    <p style="color: var(--text-gray); margin-bottom: 16px;">
+                        <span id="kannArbInfo"></span>
+                    </p>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="inputKannVon">Von (Startdatum) *</label>
+                            <input type="date" id="inputKannVon" required onchange="onKannVonChange()">
+                        </div>
+                        <div class="form-group">
+                            <label for="inputKannBis">Bis (Enddatum) *</label>
+                            <input type="date" id="inputKannBis" required onchange="calculateKannTage()">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Anzahl Tage</label>
+                        <input type="text" id="inputKannTage" readonly style="background: var(--bg-light);">
+                    </div>
+
+                    <input type="hidden" id="kannArbMitarbeiterId">
+                    <input type="hidden" id="kannArbOriginalVon">
+                    <input type="hidden" id="kannArbOriginalBis">
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeKannArbeitenDialog()">
+                            Abbrechen
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            ARB-Eintrag erstellen
                         </button>
                     </div>
                 </form>
@@ -3824,5 +5163,179 @@
             </div>
         </div>
     </div>
+    <!-- Mein Profil Dialog -->
+    <div id="meinProfilDialog" class="modal">
+        <div class="modal-overlay" onclick="closeMeinProfil()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Mein Profil</h2>
+                <button class="modal-close" onclick="closeMeinProfil()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <div id="profilFotoPreview" style="width: 120px; height: 120px; border-radius: 50%; margin: 0 auto 16px; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 48px; font-weight: 700; overflow: hidden;">
+                        MF
+                    </div>
+                    <input type="file" id="profilFotoInput" accept="image/*" style="display: none;" onchange="handleProfilFotoChange(event)">
+                    <button class="btn btn-secondary" onclick="document.getElementById('profilFotoInput').click()">
+                        📷 Foto hochladen
+                    </button>
+                    <button class="btn btn-secondary" onclick="removeProfilFoto()" id="btnRemoveFoto" style="display: none; margin-left: 8px;">
+                        🗑️ Entfernen
+                    </button>
+                </div>
+                <p style="text-align: center; color: var(--text-gray); font-size: 13px;">
+                    Empfohlen: Quadratisches Bild, max. 2 MB
+                </p>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeMeinProfil()">
+                        Schließen
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // Mein Profil Functions
+    async function openMeinProfil() {
+        document.getElementById('userDropdown').classList.remove('show');
+        
+        // Load current user's mitarbeiter data by name
+        try {
+            const { data: mitarbeiter } = await supabaseClient
+                .from('mitarbeiter')
+                .select('id, foto')
+                .ilike('vorname', currentUser.name.split(' ')[0])
+                .ilike('nachname', currentUser.name.split(' ').slice(1).join(' '))
+                .single();
+            
+            // Store mitarbeiter ID for later use
+            currentUser.mitarbeiterId = mitarbeiter?.id;
+            
+            const preview = document.getElementById('profilFotoPreview');
+            if (mitarbeiter?.foto) {
+                preview.innerHTML = `<img src="${mitarbeiter.foto}" style="width: 100%; height: 100%; object-fit: cover;">`;
+                document.getElementById('btnRemoveFoto').style.display = 'inline-block';
+            } else {
+                preview.textContent = getInitials(currentUser.name);
+                preview.style.background = 'var(--primary)';
+                document.getElementById('btnRemoveFoto').style.display = 'none';
+            }
+        } catch (error) {
+            console.error('Error loading foto:', error);
+            alert('⚠️ Kein Mitarbeiter-Eintrag gefunden für: ' + currentUser.name);
+        }
+        
+        document.getElementById('meinProfilDialog').classList.add('show');
+    }
+
+    function closeMeinProfil() {
+        document.getElementById('meinProfilDialog').classList.remove('show');
+    }
+
+    async function handleProfilFotoChange(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        if (!currentUser.mitarbeiterId) {
+            alert('⚠️ Kein Mitarbeiter-Eintrag gefunden');
+            return;
+        }
+        
+        // Check file size (max 2MB)
+        if (file.size > 2 * 1024 * 1024) {
+            alert('⚠️ Datei zu groß! Maximale Größe: 2 MB');
+            return;
+        }
+        
+        // Check file type
+        if (!file.type.startsWith('image/')) {
+            alert('⚠️ Bitte wählen Sie ein Bild');
+            return;
+        }
+        
+        try {
+            // Convert to base64
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const base64 = e.target.result;
+                
+                // Update in database
+                const { error } = await supabaseClient
+                    .from('mitarbeiter')
+                    .update({ foto: base64 })
+                    .eq('id', currentUser.mitarbeiterId);
+                
+                if (error) throw error;
+                
+                // Update preview
+                const preview = document.getElementById('profilFotoPreview');
+                preview.innerHTML = `<img src="${base64}" style="width: 100%; height: 100%; object-fit: cover;">`;
+                document.getElementById('btnRemoveFoto').style.display = 'inline-block';
+                
+                // Update header avatar
+                updateHeaderAvatar();
+            };
+            reader.readAsDataURL(file);
+            
+        } catch (error) {
+            console.error('Error uploading foto:', error);
+            alert('❌ Fehler beim Hochladen: ' + error.message);
+        }
+    }
+
+    async function removeProfilFoto() {
+        if (!confirm('Foto wirklich entfernen?')) return;
+        
+        if (!currentUser.mitarbeiterId) {
+            alert('⚠️ Kein Mitarbeiter-Eintrag gefunden');
+            return;
+        }
+        
+        try {
+            const { error } = await supabaseClient
+                .from('mitarbeiter')
+                .update({ foto: null })
+                .eq('id', currentUser.mitarbeiterId);
+            
+            if (error) throw error;
+            
+            // Reset preview
+            const preview = document.getElementById('profilFotoPreview');
+            preview.innerHTML = getInitials(currentUser.name);
+            preview.style.background = 'var(--primary)';
+            document.getElementById('btnRemoveFoto').style.display = 'none';
+            
+            // Update header avatar
+            updateHeaderAvatar();
+            
+        } catch (error) {
+            console.error('Error removing foto:', error);
+            alert('❌ Fehler: ' + error.message);
+        }
+    }
+
+    async function updateHeaderAvatar() {
+        try {
+            const { data: mitarbeiter } = await supabaseClient
+                .from('mitarbeiter')
+                .select('foto')
+                .ilike('vorname', currentUser.name.split(' ')[0])
+                .ilike('nachname', currentUser.name.split(' ').slice(1).join(' '))
+                .single();
+            
+            const avatar = document.getElementById('userAvatar');
+            if (mitarbeiter?.foto) {
+                avatar.innerHTML = `<img src="${mitarbeiter.foto}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+            } else {
+                avatar.textContent = getInitials(currentUser.name);
+                avatar.style.background = '#4f46e5';
+            }
+        } catch (error) {
+            console.error('Error updating avatar:', error);
+        }
+    }
+    </script>
 </body>
 </html>

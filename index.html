@@ -1,5 +1,81 @@
 <!DOCTYPE html>
 <html lang="de">
+<!--
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                                                                           ║
+║                      MORF DISPOSITION PRO                                 ║
+║                   Personal- & Einsatzplanung System                       ║
+║                                                                           ║
+║  Version: 2026-02-13_11:45 (Production Ready)                           ║
+║  Entwickelt: 2026-02-13                                                  ║
+║  Technologie: HTML5, CSS3, Vanilla JavaScript, Supabase                 ║
+║                                                                           ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════
+ SYSTEM-ÜBERSICHT
+═══════════════════════════════════════════════════════════════════════════
+
+HAUPTFUNKTIONEN:
+├── Dashboard
+│   ├── Statistiken (Mitarbeiter, Aufträge, Abwesenheiten)
+│   ├── Wetter-Widgets (4 Standorte: Oberglatt, Schaffhausen, Meilen, Dietikon)
+│   └── Live Multi-User Status
+├── Personal-Verwaltung
+│   ├── Mitarbeiter-Stammdaten (CRUD)
+│   ├── Profil-Fotos mit Cropper
+│   ├── 9 Funktionen: GL, FL, DI, EC, PL, TKB, MA, WS, BO
+│   ├── 9 Filialen: VW, AG, BO, GL, GR, SG, ZH, ZS, WS
+│   └── Aktiv/Inaktiv Status
+├── Kalender
+│   ├── Monatsansicht (Matrix: Mitarbeiter × Tage)
+│   ├── Abwesenheiten: FE, KO, KR, UF
+│   ├── Betriebsferien (BF) - Filialbezogen
+│   ├── Feiertage (FT) - Filialbezogen, wiederkehrend
+│   ├── Kann-Arbeiten Funktion (während BF/FT)
+│   ├── Filter: Funktion, Filiale
+│   └── Wochenend-Auto-Erweiterung (FE/KO: Mo→Sa-So, Fr→Sa-So)
+├── Aufträge (Placeholder)
+└── Tagesprogramm (Placeholder)
+
+BERECHTIGUNGSSYSTEM:
+├── Rollen: Admin, User
+├── Berechtigungen:
+│   ├── canViewPersonal - Personal-Modul sehen
+│   ├── canEditPersonal - Personal bearbeiten
+│   ├── canViewCalendar - Kalender sehen
+│   ├── canEditCalendar - Kalender bearbeiten
+│   ├── canManageBfFt - Betriebsferien/Feiertage verwalten
+│   ├── canViewAuftraege - Aufträge sehen
+│   └── canViewTagesprogramm - Tagesprogramm sehen
+
+DATENBANK (Supabase):
+├── Tabellen:
+│   ├── users - Benutzer & Berechtigungen
+│   ├── mitarbeiter - Mitarbeiter-Stammdaten
+│   ├── abwesenheits_perioden - Kalender-Einträge
+│   ├── auftraege - Aufträge (geplant)
+│   └── (weitere Tabellen für Tagesprogramm geplant)
+
+RESPONSIVE DESIGN:
+├── Mobile (< 600px) - Sidebar kollabiert, 1 Spalte
+├── Tablet (600px - 900px) - 2 Spalten
+├── Desktop (900px - 1600px) - Standard
+├── Large Desktop (1600px - 1920px) - Größere Fonts
+└── XL Desktop (1920px+) - Maximale Größe
+
+TECHNOLOGIE-STACK:
+├── Frontend: Vanilla JavaScript (kein Framework)
+├── Backend: Supabase (PostgreSQL)
+├── Auth: Supabase Auth + bcrypt
+├── APIs: Open-Meteo (Wetter), keine API-Keys nötig
+├── Libraries:
+│   ├── Supabase JS Client
+│   ├── bcrypt.js (Passwort-Hashing)
+│   └── Chart.js (Wetter-Visualisierung)
+
+═══════════════════════════════════════════════════════════════════════════
+-->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -2146,6 +2222,52 @@
         // ============================================
         // LOGIN SYSTEM
         // ============================================
+        // Secure password hashing using SHA-256
+        async function hashPassword(password) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(password + '_morf_salt_2026');
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        // One-time migration: hash all plaintext passwords
+        // Run in console: migratePasswords()
+        async function migratePasswords() {
+            try {
+                const { data: users, error } = await supabaseClient
+                    .from('system_users')
+                    .select('id, username, password');
+                
+                if (error) throw error;
+                
+                let migrated = 0;
+                for (const user of users) {
+                    // Skip if already hashed (64 hex chars = SHA-256)
+                    if (user.password && user.password.length === 64 && /^[a-f0-9]+$/.test(user.password)) {
+                        console.log(`⏭️ ${user.username} - bereits gehasht`);
+                        continue;
+                    }
+                    
+                    const hashedPw = await hashPassword(user.password);
+                    const { error: updateError } = await supabaseClient
+                        .from('system_users')
+                        .update({ password: hashedPw })
+                        .eq('id', user.id);
+                    
+                    if (updateError) {
+                        console.error(`❌ ${user.username}:`, updateError);
+                    } else {
+                        console.log(`✅ ${user.username} - Passwort gehasht`);
+                        migrated++;
+                    }
+                }
+                console.log(`🔒 Migration abgeschlossen: ${migrated} Passwörter gehasht`);
+            } catch (error) {
+                console.error('❌ Migration fehlgeschlagen:', error);
+            }
+        }
+
         async function handleLogin(event) {
             event.preventDefault();
             
@@ -2160,14 +2282,13 @@
             document.getElementById('loginLoading').style.display = 'block';
 
             try {
-                // Query user from database
+                // Hash password and verify via secure server-side function
+                const passwordHash = await hashPassword(password);
                 const { data, error } = await supabaseClient
-                    .from('system_users')
-                    .select('*')
-                    .eq('username', username)
-                    .eq('password', password)
-                    .eq('active', true)
-                    .single();
+                    .rpc('verify_login', { 
+                        p_username: username, 
+                        p_password_hash: passwordHash 
+                    });
 
                 if (error || !data) {
                     throw new Error('Ungültige Anmeldedaten');
@@ -2456,26 +2577,24 @@
         // KALENDER & ABWESENHEITEN
         // ============================================
         let currentKalenderMonth = new Date();
-        let selectedFunktionen = ['EC', 'MA', 'DP', 'TKB', 'FL', 'VW', 'BO']; // All selected by default
-        let selectedFilialen = ['AG', 'BO', 'GL', 'GR', 'SG', 'VW', 'ZH', 'ZS']; // All selected by default
+        let selectedFunktionen = ['GL', 'FL', 'DI', 'EC', 'PL', 'TKB', 'MA', 'WS', 'BO']; // All selected by default
+        let selectedFilialen = ['VW', 'AG', 'BO', 'GL', 'GR', 'SG', 'ZH', 'ZS', 'WS']; // All selected by default
         let openDropdownId = null; // Track which dropdown is open
         let allAbwesenheiten = [];
 
         async function loadKalender() {
             // Reset filters to default (all selected)
-            selectedFunktionen = ['EC', 'MA', 'DP', 'TKB', 'FL', 'VW', 'BO'];
-            selectedFilialen = ['AG', 'BO', 'GL', 'GR', 'SG', 'VW', 'ZH', 'ZS'];
+            selectedFunktionen = ['GL', 'FL', 'DI', 'EC', 'PL', 'TKB', 'MA', 'WS', 'BO'];
+            selectedFilialen = ['VW', 'AG', 'BO', 'GL', 'GR', 'SG', 'ZH', 'ZS', 'WS'];
             
             try {
-                // Load mitarbeiter if not loaded yet
-                if (allMitarbeiter.length === 0) {
-                    const { data: mitarbeiterData } = await supabaseClient
-                        .from('mitarbeiter')
-                        .select('*')
-                        .order('nachname');
-                    
-                    allMitarbeiter = mitarbeiterData || [];
-                }
+                // Always reload mitarbeiter to get latest data
+                const { data: mitarbeiterData } = await supabaseClient
+                    .from('mitarbeiter')
+                    .select('*')
+                    .order('nachname');
+                
+                allMitarbeiter = mitarbeiterData || [];
 
                 // Load absences
                 const { data, error } = await supabaseClient
@@ -2577,7 +2696,7 @@
         function toggleAllFunktion(checkbox) {
             if (checkbox.checked) {
                 // When "Alle" gets checked → Activate all
-                selectedFunktionen = ['EC', 'MA', 'DP', 'TKB', 'FL', 'VW', 'BO'];
+                selectedFunktionen = ['GL', 'FL', 'DI', 'EC', 'PL', 'TKB', 'MA', 'WS', 'BO'];
                 // Immediately update visual checkboxes
                 document.querySelectorAll('.funktion-checkbox').forEach(cb => {
                     cb.checked = true;
@@ -2596,7 +2715,7 @@
         function toggleAllFiliale(checkbox) {
             if (checkbox.checked) {
                 // When "Alle" gets checked → Activate all
-                selectedFilialen = ['AG', 'BO', 'GL', 'GR', 'SG', 'VW', 'ZH', 'ZS'];
+                selectedFilialen = ['VW', 'AG', 'BO', 'GL', 'GR', 'SG', 'ZH', 'ZS', 'WS'];
                 // Immediately update visual checkboxes
                 document.querySelectorAll('.filiale-checkbox').forEach(cb => {
                     cb.checked = true;
@@ -2727,6 +2846,7 @@
                 
                 days.forEach(d => {
                     // Find ALL absences for this employee on this date
+                    // Date comparison: d.date, a.von, a.bis are all in YYYY-MM-DD format
                     const absences = allAbwesenheiten.filter(a => 
                         parseInt(a.mitarbeiter_id) === emp.id &&
                         d.date >= a.von &&
@@ -2798,22 +2918,28 @@
                     <input type="checkbox" id="allesFunktionCheckbox" value="all" onchange="toggleAllFunktion(this)"> Alle
                 </label>
                 <label class="filter-option">
-                    <input type="checkbox" class="funktion-checkbox" value="EC" onchange="updateFunktionFilter()"> EC
-                </label>
-                <label class="filter-option">
-                    <input type="checkbox" class="funktion-checkbox" value="MA" onchange="updateFunktionFilter()"> MA
-                </label>
-                <label class="filter-option">
-                    <input type="checkbox" class="funktion-checkbox" value="DP" onchange="updateFunktionFilter()"> DP
-                </label>
-                <label class="filter-option">
-                    <input type="checkbox" class="funktion-checkbox" value="TKB" onchange="updateFunktionFilter()"> TKB
+                    <input type="checkbox" class="funktion-checkbox" value="GL" onchange="updateFunktionFilter()"> GL
                 </label>
                 <label class="filter-option">
                     <input type="checkbox" class="funktion-checkbox" value="FL" onchange="updateFunktionFilter()"> FL
                 </label>
                 <label class="filter-option">
-                    <input type="checkbox" class="funktion-checkbox" value="VW" onchange="updateFunktionFilter()"> VW
+                    <input type="checkbox" class="funktion-checkbox" value="DI" onchange="updateFunktionFilter()"> DI
+                </label>
+                <label class="filter-option">
+                    <input type="checkbox" class="funktion-checkbox" value="EC" onchange="updateFunktionFilter()"> EC
+                </label>
+                <label class="filter-option">
+                    <input type="checkbox" class="funktion-checkbox" value="PL" onchange="updateFunktionFilter()"> PL
+                </label>
+                <label class="filter-option">
+                    <input type="checkbox" class="funktion-checkbox" value="TKB" onchange="updateFunktionFilter()"> TKB
+                </label>
+                <label class="filter-option">
+                    <input type="checkbox" class="funktion-checkbox" value="MA" onchange="updateFunktionFilter()"> MA
+                </label>
+                <label class="filter-option">
+                    <input type="checkbox" class="funktion-checkbox" value="WS" onchange="updateFunktionFilter()"> WS
                 </label>
                 <label class="filter-option">
                     <input type="checkbox" class="funktion-checkbox" value="BO" onchange="updateFunktionFilter()"> BO
@@ -2824,7 +2950,7 @@
             setTimeout(() => {
                 const alleFunktionCb = document.getElementById('allesFunktionCheckbox');
                 if (alleFunktionCb) {
-                    alleFunktionCb.checked = selectedFunktionen.length === 7;
+                    alleFunktionCb.checked = selectedFunktionen.length === 9;
                     console.log('Alle Funktion checkbox set to:', alleFunktionCb.checked, 'selectedFunktionen:', selectedFunktionen);
                 }
                 document.querySelectorAll('.funktion-checkbox').forEach(cb => {
@@ -2861,13 +2987,16 @@
                 <label class="filter-option">
                     <input type="checkbox" class="filiale-checkbox" value="ZS" onchange="updateFilialeFilter()"> ZS
                 </label>
+                <label class="filter-option">
+                    <input type="checkbox" class="filiale-checkbox" value="WS" onchange="updateFilialeFilter()"> WS
+                </label>
             `;
             
             // Now programmatically set checked states
             setTimeout(() => {
                 const alleFilialeCb = document.getElementById('allesFilialeCheckbox');
                 if (alleFilialeCb) {
-                    alleFilialeCb.checked = selectedFilialen.length === 8;
+                    alleFilialeCb.checked = selectedFilialen.length === 9;
                     console.log('Alle Filiale checkbox set to:', alleFilialeCb.checked, 'selectedFilialen:', selectedFilialen);
                 }
                 document.querySelectorAll('.filiale-checkbox').forEach(cb => {
@@ -3076,6 +3205,24 @@
                 }
                 
                 console.log('Insert successful, count:', entries.length);
+                
+                // Save BF templates for future employees
+                const vorlagen = [];
+                if (verwaltung) {
+                    vorlagen.push({ typ: 'BF', name: `Betriebsferien ${von}`, von, bis, tage, gruppe: 'VW', jaehrlich: false });
+                }
+                if (filialen) {
+                    vorlagen.push({ typ: 'BF', name: `Betriebsferien ${von}`, von, bis, tage, gruppe: 'FB', jaehrlich: false });
+                }
+                const { error: vorlageError } = await supabaseClient
+                    .from('bf_ft_vorlagen')
+                    .insert(vorlagen);
+                if (vorlageError) {
+                    console.error('⚠️ Vorlage-Speicherung fehlgeschlagen:', vorlageError);
+                } else {
+                    console.log(`✅ ${vorlagen.length} BF-Vorlagen gespeichert`);
+                }
+
                 closeBetriebsferienDialog();
                 loadKalender();
                 
@@ -3631,6 +3778,17 @@
                 
                 if (error) throw error;
                 
+                // Also delete matching vorlagen
+                for (const entry of entries) {
+                    await supabaseClient
+                        .from('bf_ft_vorlagen')
+                        .delete()
+                        .eq('typ', typ)
+                        .eq('von', entry.von)
+                        .eq('bis', entry.bis);
+                }
+                console.log('✅ Vorlagen ebenfalls gelöscht');
+                
                 await loadKalender();
                 loadBfFtList(); // Refresh list
                 
@@ -3655,6 +3813,15 @@
                     .eq('bis', bis);
                 
                 if (error) throw error;
+                
+                // Also delete matching vorlagen
+                await supabaseClient
+                    .from('bf_ft_vorlagen')
+                    .delete()
+                    .eq('typ', typ)
+                    .eq('von', von)
+                    .eq('bis', bis);
+                console.log('✅ Vorlagen ebenfalls gelöscht');
                 
                 await loadKalender();
                 loadBfFtList(); // Refresh list
@@ -3808,6 +3975,38 @@
                 }
                 
                 console.log('Insert successful');
+                
+                // Save FT templates for future employees
+                const vorlagen = [];
+                for (let year = 0; year < years; year++) {
+                    const yearVon = new Date(von);
+                    yearVon.setFullYear(yearVon.getFullYear() + year);
+                    const yearBis = new Date(bis);
+                    yearBis.setFullYear(yearBis.getFullYear() + year);
+                    const vonStr = yearVon.toISOString().split('T')[0];
+                    const bisStr = yearBis.toISOString().split('T')[0];
+                    
+                    selectedFilialen.forEach(fil => {
+                        vorlagen.push({
+                            typ: 'FT',
+                            name: name,
+                            von: vonStr,
+                            bis: bisStr,
+                            tage: tage,
+                            gruppe: fil,
+                            jaehrlich: jaehrlich
+                        });
+                    });
+                }
+                const { error: vorlageError } = await supabaseClient
+                    .from('bf_ft_vorlagen')
+                    .insert(vorlagen);
+                if (vorlageError) {
+                    console.error('⚠️ Vorlage-Speicherung fehlgeschlagen:', vorlageError);
+                } else {
+                    console.log(`✅ ${vorlagen.length} FT-Vorlagen gespeichert`);
+                }
+
                 closeFeiertagDialog();
                 loadKalender();
                 
@@ -4739,6 +4938,8 @@
             document.getElementById('mitarbeiterForm').reset();
             document.getElementById('editMitarbeiterId').value = '';
             document.getElementById('inputAktiv').checked = true;
+            document.getElementById('inputPassword').placeholder = 'Initiales Passwort festlegen';
+            document.getElementById('existingSystemUserId').value = '';
             
             // Load EC dropdown
             loadECDropdown();
@@ -4779,7 +4980,8 @@
                     document.getElementById('existingSystemUserId').value = systemUser.id;
                     document.getElementById('inputSystemRolle').value = systemUser.role;
                     document.getElementById('inputUsername').value = systemUser.username;
-                    document.getElementById('inputPassword').value = systemUser.password;
+                    document.getElementById('inputPassword').value = '';
+                    document.getElementById('inputPassword').placeholder = 'Leer lassen = unverändert';
                     toggleSystemZugang();
                 } else {
                     document.getElementById('inputSystemZugang').checked = false;
@@ -4873,7 +5075,7 @@
             
             const username = document.getElementById('inputUsername').value.trim();
             const statusEl = document.getElementById('usernameStatus');
-            const editingUserId = document.getElementById('existingSystemUserId').value;
+            const editId = document.getElementById('editMitarbeiterId').value;
 
             if (!username) {
                 statusEl.innerHTML = '';
@@ -4888,13 +5090,13 @@
                 try {
                     const { data, error } = await supabaseClient
                         .from('system_users')
-                        .select('id')
+                        .select('id, mitarbeiter_id')
                         .eq('username', username);
 
                     if (error) throw error;
 
-                    // If editing and username belongs to current user, it's ok
-                    if (editingUserId && data.length === 1 && data[0].id === parseInt(editingUserId)) {
+                    // If editing and username belongs to THIS mitarbeiter, it's ok
+                    if (editId && data.length > 0 && data.some(u => u.mitarbeiter_id === parseInt(editId))) {
                         statusEl.innerHTML = '<span style="color: var(--success);">✅ Ihr aktueller Benutzername</span>';
                         return;
                     }
@@ -4973,6 +5175,84 @@
             });
         }
 
+        // Assign future BF/FT entries to a newly created or filiale-changed employee
+        // Reads from bf_ft_vorlagen table instead of searching colleagues
+        async function assignFutureBfFtToEmployee(newMitarbeiterId, filiale) {
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const isVerwaltung = filiale === 'VW';
+                const bfGruppe = isVerwaltung ? 'VW' : 'FB';
+                console.log(`🔄 BF/FT-Zuweisung Start: MA-ID=${newMitarbeiterId}, Filiale=${filiale}, BF-Gruppe=${bfGruppe}, heute=${today}`);
+
+                const newEntries = [];
+
+                // --- BF-Vorlagen laden (VW oder FB) ---
+                const { data: bfVorlagen, error: bfError } = await supabaseClient
+                    .from('bf_ft_vorlagen')
+                    .select('von, bis, tage')
+                    .eq('typ', 'BF')
+                    .eq('gruppe', bfGruppe)
+                    .gte('bis', today);
+
+                if (bfError) {
+                    console.error('⚠️ BF-Vorlagen Fehler:', bfError);
+                } else {
+                    console.log(`📋 BF-Vorlagen (${bfGruppe}): ${(bfVorlagen || []).length}`, bfVorlagen);
+                    (bfVorlagen || []).forEach(v => {
+                        newEntries.push({
+                            mitarbeiter_id: newMitarbeiterId,
+                            typ: 'BF',
+                            von: v.von,
+                            bis: v.bis,
+                            tage: v.tage
+                        });
+                    });
+                }
+
+                // --- FT-Vorlagen laden (für die spezifische Filiale) ---
+                const { data: ftVorlagen, error: ftError } = await supabaseClient
+                    .from('bf_ft_vorlagen')
+                    .select('von, bis, tage')
+                    .eq('typ', 'FT')
+                    .eq('gruppe', filiale)
+                    .gte('bis', today);
+
+                if (ftError) {
+                    console.error('⚠️ FT-Vorlagen Fehler:', ftError);
+                } else {
+                    console.log(`📋 FT-Vorlagen (${filiale}): ${(ftVorlagen || []).length}`, ftVorlagen);
+                    (ftVorlagen || []).forEach(v => {
+                        newEntries.push({
+                            mitarbeiter_id: newMitarbeiterId,
+                            typ: 'FT',
+                            von: v.von,
+                            bis: v.bis,
+                            tage: v.tage
+                        });
+                    });
+                }
+
+                if (newEntries.length === 0) {
+                    console.log('ℹ️ Keine BF/FT-Vorlagen gefunden');
+                    return;
+                }
+
+                console.log(`📋 Erstelle ${newEntries.length} BF/FT-Einträge aus Vorlagen:`, newEntries);
+                const { error: insertError } = await supabaseClient
+                    .from('abwesenheits_perioden')
+                    .insert(newEntries);
+
+                if (insertError) {
+                    console.error('❌ Insert Fehler:', insertError);
+                    throw insertError;
+                }
+                console.log(`✅ ${newEntries.length} BF/FT-Einträge erfolgreich erstellt`);
+
+            } catch (error) {
+                console.error('⚠️ Fehler bei BF/FT-Zuweisung:', error);
+            }
+        }
+
         async function saveMitarbeiter(event) {
             event.preventDefault();
 
@@ -4994,21 +5274,23 @@
 
             // Validation for system access
             if (systemZugang) {
-                if (!systemRolle || !username || !password) {
+                const isEditingExistingUser = !!document.getElementById('existingSystemUserId').value;
+                if (!systemRolle || !username || (!password && !isEditingExistingUser)) {
                     alert('Bitte füllen Sie alle System-Zugang Felder aus!');
                     return;
                 }
 
-                // Check username availability one more time before saving
-                const existingUserId = document.getElementById('existingSystemUserId').value;
+                // Check username availability - but allow own username when editing
+                const mitarbeiterId = editId ? parseInt(editId) : null;
                 const { data: existingUsers } = await supabaseClient
                     .from('system_users')
-                    .select('id')
+                    .select('id, mitarbeiter_id')
                     .eq('username', username);
 
                 if (existingUsers && existingUsers.length > 0) {
-                    // If editing and it's the same user, that's ok
-                    if (!existingUserId || existingUsers[0].id !== parseInt(existingUserId)) {
+                    // If editing: allow if the username belongs to THIS mitarbeiter
+                    const isOwnUsername = mitarbeiterId && existingUsers.some(u => u.mitarbeiter_id === mitarbeiterId);
+                    if (!isOwnUsername) {
                         alert(`❌ Benutzername "${username}" ist bereits vergeben!\n\nBitte wählen Sie einen anderen Namen.`);
                         return;
                     }
@@ -5030,6 +5312,11 @@
                 };
 
                 if (editId) {
+                    // Check if filiale changed
+                    const oldMitarbeiter = allMitarbeiter.find(m => m.id === mitarbeiterId);
+                    const filialeChanged = oldMitarbeiter && oldMitarbeiter.filiale !== filiale;
+                    const oldFiliale = oldMitarbeiter ? oldMitarbeiter.filiale : null;
+
                     // Update mitarbeiter
                     const { error } = await supabaseClient
                         .from('mitarbeiter')
@@ -5038,6 +5325,29 @@
 
                     if (error) throw error;
                     console.log('✅ Mitarbeiter updated');
+
+                    // If filiale changed, reassign future BF/FT
+                    if (filialeChanged) {
+                        console.log(`📋 Filiale geändert: ${oldFiliale} → ${filiale}, BF/FT werden aktualisiert...`);
+                        
+                        // Remove future BF/FT entries for this employee
+                        const today = new Date().toISOString().split('T')[0];
+                        const { error: delError } = await supabaseClient
+                            .from('abwesenheits_perioden')
+                            .delete()
+                            .eq('mitarbeiter_id', mitarbeiterId)
+                            .in('typ', ['BF', 'FT'])
+                            .gte('bis', today);
+                        
+                        if (delError) {
+                            console.error('⚠️ Fehler beim Entfernen alter BF/FT:', delError);
+                        } else {
+                            console.log('✅ Alte zukünftige BF/FT entfernt');
+                        }
+
+                        // Assign new BF/FT based on new filiale
+                        await assignFutureBfFtToEmployee(mitarbeiterId, filiale);
+                    }
                 } else {
                     // Insert new mitarbeiter
                     mitarbeiterData.id = mitarbeiterId;
@@ -5047,6 +5357,9 @@
 
                     if (error) throw error;
                     console.log('✅ Mitarbeiter created');
+
+                    // Assign future BF/FT entries to new employee
+                    await assignFutureBfFtToEmployee(mitarbeiterId, filiale);
                 }
 
                 // Handle system user
@@ -5055,12 +5368,16 @@
 
                     const systemUserData = {
                         username,
-                        password,
                         name: `${vorname} ${nachname}`,
                         role: systemRolle,
                         active: aktiv,
                         mitarbeiter_id: mitarbeiterId
                     };
+
+                    // Only hash and include password if a new one was entered
+                    if (password) {
+                        systemUserData.password = await hashPassword(password);
+                    }
 
                     if (existingUserId) {
                         // Update existing system user
@@ -5070,8 +5387,12 @@
                             .eq('id', parseInt(existingUserId));
 
                         if (error) throw error;
-                        console.log('✅ System user updated');
+                        console.log('✅ System user updated' + (password ? ' (Passwort geändert)' : ''));
                     } else {
+                        if (!password) {
+                            throw new Error('Passwort ist erforderlich für neue Benutzer!');
+                        }
+
                         // Check if username already exists
                         const { data: existingUser } = await supabaseClient
                             .from('system_users')
@@ -5096,6 +5417,13 @@
                 closeMitarbeiterDialog();
                 await loadMitarbeiter();
                 await loadDashboardData();
+                
+                // Reload absences so calendar is up to date
+                const { data: freshAbwesenheiten } = await supabaseClient
+                    .from('abwesenheits_perioden')
+                    .select('*')
+                    .order('von');
+                allAbwesenheiten = freshAbwesenheiten || [];
 
                 if (systemZugang && !editId) {
                     alert(`✅ Mitarbeiter erfasst!\n\nLogin-Daten:\nUsername: ${username}\nPasswort: ${password}\n\nBitte notieren und dem Mitarbeiter mitteilen.`);
@@ -5841,7 +6169,7 @@
                             </div>
                             <div class="form-group">
                                 <label for="inputPassword">Passwort *</label>
-                                <input type="text" id="inputPassword" placeholder="Initiales Passwort festlegen">
+                                <input type="password" id="inputPassword" placeholder="Initiales Passwort festlegen">
                                 <small style="color: var(--text-gray); font-size: 12px;">Mitarbeiter kann es später ändern</small>
                             </div>
                         </div>
@@ -5938,6 +6266,55 @@
     </div>
 
     <script>
+    /*
+    ═══════════════════════════════════════════════════════════════════════
+     JAVASCRIPT HAUPTLOGIK
+    ═══════════════════════════════════════════════════════════════════════
+    
+    STRUKTUR:
+    ├── 1. SUPABASE INITIALISIERUNG
+    ├── 2. GLOBALE VARIABLEN
+    ├── 3. AUTHENTIFIZIERUNG
+    ├── 4. BERECHTIGUNGSSYSTEM
+    ├── 5. NAVIGATION & UI
+    ├── 6. DASHBOARD
+    │   └── Wetter-Widgets (4 Standorte, 24h-Vorhersage, 4-Tages-Vorschau)
+    ├── 7. PERSONAL-VERWALTUNG
+    │   ├── Mitarbeiter CRUD
+    │   ├── Profil-Foto Upload & Cropper
+    │   └── Filter & Such-Funktionen
+    ├── 8. KALENDER
+    │   ├── Matrix-Rendering (Mitarbeiter × Tage)
+    │   ├── Abwesenheiten (FE, KO, KR, UF)
+    │   ├── Betriebsferien (BF)
+    │   ├── Feiertage (FT)
+    │   ├── Kann-Arbeiten Funktion
+    │   └── Filter (Funktion, Filiale)
+    ├── 9. AUFTRÄGE (Placeholder)
+    ├── 10. TAGESPROGRAMM (Placeholder)
+    └── 11. ADMIN-PANEL (Berechtigungen)
+    
+    WICHTIGE FUNKTIONEN:
+    - checkSession() - Prüft Login-Status
+    - hasPermission(perm) - Berechtigungs-Check
+    - loadMitarbeiter() - Lädt Personal-Daten
+    - renderKalenderMatrix() - Zeichnet Kalender
+    - saveAbwesenheit() - Speichert Kalender-Eintrag mit Wochenend-Logik
+    - loadWeatherForLocation() - Lädt Wetter-Daten
+    
+    BESONDERHEITEN:
+    - Wochenend-Auto-Erweiterung bei FE/KO:
+      Mo-Start → inkl. Sa+So davor
+      Fr-Ende → inkl. Sa+So danach
+    - BF/FT sind "protected" und können nur mit "Kann arbeiten" überschrieben werden
+    - Datum-Format: YYYY-MM-DD (wichtig für String-Vergleiche!)
+    - Avatar-Fotos: Base64 in DB gespeichert
+    */
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // 1. MEIN PROFIL FUNKTIONEN (Global verfügbar machen)
+    // ═══════════════════════════════════════════════════════════════════
+    
     // Mein Profil Functions - Make globally available
     window.openMeinProfil = async function() {
         document.getElementById('userDropdown').classList.remove('show');
@@ -6184,7 +6561,7 @@
     
     <!-- Version Check -->
     <div id="versionInfo" style="position: fixed; bottom: 8px; right: 8px; font-size: 10px; color: #999; background: white; padding: 4px 8px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); z-index: 9999;">
-        v2026-02-13_11:35 (Kann arbeiten Fix)
+        v2026-02-17_11:45 (Passwort-Hashing + Sicherheit)
     </div>
 </body>
 </html>

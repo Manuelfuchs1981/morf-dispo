@@ -2231,42 +2231,7 @@ TECHNOLOGIE-STACK:
             return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
         }
 
-        // One-time migration: hash all plaintext passwords
-        // Run in console: migratePasswords()
-        async function migratePasswords() {
-            try {
-                const { data: users, error } = await supabaseClient
-                    .from('system_users')
-                    .select('id, username, password');
-                
-                if (error) throw error;
-                
-                let migrated = 0;
-                for (const user of users) {
-                    // Skip if already hashed (64 hex chars = SHA-256)
-                    if (user.password && user.password.length === 64 && /^[a-f0-9]+$/.test(user.password)) {
-                        console.log(`⏭️ ${user.username} - bereits gehasht`);
-                        continue;
-                    }
-                    
-                    const hashedPw = await hashPassword(user.password);
-                    const { error: updateError } = await supabaseClient
-                        .from('system_users')
-                        .update({ password: hashedPw })
-                        .eq('id', user.id);
-                    
-                    if (updateError) {
-                        console.error(`❌ ${user.username}:`, updateError);
-                    } else {
-                        console.log(`✅ ${user.username} - Passwort gehasht`);
-                        migrated++;
-                    }
-                }
-                console.log(`🔒 Migration abgeschlossen: ${migrated} Passwörter gehasht`);
-            } catch (error) {
-                console.error('❌ Migration fehlgeschlagen:', error);
-            }
-        }
+        // migratePasswords() - already executed, removed for security
 
         async function handleLogin(event) {
             event.preventDefault();
@@ -4267,14 +4232,15 @@ TECHNOLOGIE-STACK:
             // No need to check again - already checked in openBerechtigungen
 
             try {
-                const [rolesRes, usersRes, stvRes] = await Promise.all([
+                const [rolesRes, usersRpc, stvRes] = await Promise.all([
                     supabaseClient.from('role_permissions').select('*').order('id'),
-                    supabaseClient.from('system_users').select('id, name, role, active').eq('active', true),
+                    supabaseClient.rpc('get_active_system_users'),
                     supabaseClient.from('admin_stellvertreter').select('stellvertreter_user_id')
                 ]);
 
                 if (rolesRes.error) throw rolesRes.error;
-                if (usersRes.error) throw usersRes.error;
+                
+                const activeUsers = usersRpc.data || [];
 
                 allRoles = rolesRes.data || [];
                 
@@ -4282,7 +4248,7 @@ TECHNOLOGIE-STACK:
                 const stellvertreterSection = document.getElementById('stellvertreterSection');
                 if (currentUser.role === 'admin' && !currentUser.isStellvertreter) {
                     stellvertreterSection.style.display = 'block';
-                    renderStellvertreter(usersRes.data || [], stvRes.data || []);
+                    renderStellvertreter(activeUsers, stvRes.data || []);
                 } else {
                     stellvertreterSection.style.display = 'none';
                 }
@@ -4970,10 +4936,7 @@ TECHNOLOGIE-STACK:
             // Check if system user exists
             try {
                 const { data: systemUser } = await supabaseClient
-                    .from('system_users')
-                    .select('*')
-                    .eq('mitarbeiter_id', mitarbeiter.id)
-                    .single();
+                    .rpc('get_system_user_by_mitarbeiter', { p_mitarbeiter_id: mitarbeiter.id });
 
                 if (systemUser) {
                     document.getElementById('inputSystemZugang').checked = true;
@@ -5089,19 +5052,19 @@ TECHNOLOGIE-STACK:
             usernameCheckTimeout = setTimeout(async () => {
                 try {
                     const { data, error } = await supabaseClient
-                        .from('system_users')
-                        .select('id, mitarbeiter_id')
-                        .eq('username', username);
+                        .rpc('check_username', { p_username: username });
 
                     if (error) throw error;
 
+                    const users = data || [];
+
                     // If editing and username belongs to THIS mitarbeiter, it's ok
-                    if (editId && data.length > 0 && data.some(u => u.mitarbeiter_id === parseInt(editId))) {
+                    if (editId && users.length > 0 && users.some(u => u.mitarbeiter_id === parseInt(editId))) {
                         statusEl.innerHTML = '<span style="color: var(--success);">✅ Ihr aktueller Benutzername</span>';
                         return;
                     }
 
-                    if (data && data.length > 0) {
+                    if (users && users.length > 0) {
                         // Username taken - suggest alternative
                         const suggestion = await suggestAlternativeUsername(username);
                         statusEl.innerHTML = `
@@ -5122,21 +5085,12 @@ TECHNOLOGIE-STACK:
         }
 
         async function suggestAlternativeUsername(baseUsername) {
-            // Try username2, username3, etc.
-            for (let i = 2; i <= 99; i++) {
-                const candidate = baseUsername + i;
-                
-                const { data } = await supabaseClient
-                    .from('system_users')
-                    .select('id')
-                    .eq('username', candidate);
-
-                if (!data || data.length === 0) {
-                    return candidate;
-                }
-            }
+            const { data, error } = await supabaseClient
+                .rpc('suggest_username', { p_base_username: baseUsername });
             
-            // Fallback: add timestamp
+            if (!error && data) return data;
+            
+            // Fallback
             return baseUsername + '_' + Date.now();
         }
 
@@ -5283,13 +5237,12 @@ TECHNOLOGIE-STACK:
                 // Check username availability - but allow own username when editing
                 const mitarbeiterId = editId ? parseInt(editId) : null;
                 const { data: existingUsers } = await supabaseClient
-                    .from('system_users')
-                    .select('id, mitarbeiter_id')
-                    .eq('username', username);
+                    .rpc('check_username', { p_username: username });
 
-                if (existingUsers && existingUsers.length > 0) {
+                const usersList = existingUsers || [];
+                if (usersList.length > 0) {
                     // If editing: allow if the username belongs to THIS mitarbeiter
-                    const isOwnUsername = mitarbeiterId && existingUsers.some(u => u.mitarbeiter_id === mitarbeiterId);
+                    const isOwnUsername = mitarbeiterId && usersList.some(u => u.mitarbeiter_id === mitarbeiterId);
                     if (!isOwnUsername) {
                         alert(`❌ Benutzername "${username}" ist bereits vergeben!\n\nBitte wählen Sie einen anderen Namen.`);
                         return;
@@ -5366,25 +5319,20 @@ TECHNOLOGIE-STACK:
                 if (systemZugang) {
                     const existingUserId = document.getElementById('existingSystemUserId').value;
 
-                    const systemUserData = {
-                        username,
-                        name: `${vorname} ${nachname}`,
-                        role: systemRolle,
-                        active: aktiv,
-                        mitarbeiter_id: mitarbeiterId
-                    };
-
-                    // Only hash and include password if a new one was entered
-                    if (password) {
-                        systemUserData.password = await hashPassword(password);
-                    }
+                    const hashedPw = password ? await hashPassword(password) : null;
 
                     if (existingUserId) {
-                        // Update existing system user
-                        const { error } = await supabaseClient
-                            .from('system_users')
-                            .update(systemUserData)
-                            .eq('id', parseInt(existingUserId));
+                        // Update existing system user via RPC
+                        const { data: updateResult, error } = await supabaseClient
+                            .rpc('update_system_user', {
+                                p_id: parseInt(existingUserId),
+                                p_username: username,
+                                p_password: hashedPw,
+                                p_name: `${vorname} ${nachname}`,
+                                p_role: systemRolle,
+                                p_active: aktiv,
+                                p_mitarbeiter_id: mitarbeiterId
+                            });
 
                         if (error) throw error;
                         console.log('✅ System user updated' + (password ? ' (Passwort geändert)' : ''));
@@ -5393,23 +5341,21 @@ TECHNOLOGIE-STACK:
                             throw new Error('Passwort ist erforderlich für neue Benutzer!');
                         }
 
-                        // Check if username already exists
-                        const { data: existingUser } = await supabaseClient
-                            .from('system_users')
-                            .select('id')
-                            .eq('username', username)
-                            .single();
-
-                        if (existingUser) {
-                            throw new Error(`Benutzername "${username}" existiert bereits!`);
-                        }
-
-                        // Create new system user
-                        const { error } = await supabaseClient
-                            .from('system_users')
-                            .insert([systemUserData]);
+                        // Create new system user via RPC
+                        const { data: createResult, error } = await supabaseClient
+                            .rpc('create_system_user', {
+                                p_username: username,
+                                p_password: hashedPw,
+                                p_name: `${vorname} ${nachname}`,
+                                p_role: systemRolle,
+                                p_active: aktiv,
+                                p_mitarbeiter_id: mitarbeiterId
+                            });
 
                         if (error) throw error;
+                        if (createResult && createResult.error) {
+                            throw new Error(`Benutzername "${username}" existiert bereits!`);
+                        }
                         console.log('✅ System user created');
                     }
                 }
@@ -6561,7 +6507,7 @@ TECHNOLOGIE-STACK:
     
     <!-- Version Check -->
     <div id="versionInfo" style="position: fixed; bottom: 8px; right: 8px; font-size: 10px; color: #999; background: white; padding: 4px 8px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); z-index: 9999;">
-        v2026-02-17_11:45 (Passwort-Hashing + Sicherheit)
+        v2026-02-17_12:00 (System-Users komplett abgesichert)
     </div>
 </body>
 </html>

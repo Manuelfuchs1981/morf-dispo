@@ -2195,9 +2195,10 @@ TECHNOLOGIE-STACK:
         const SUPABASE_KEY = 'sb_publishable_lFujU57HDKGHOTh3zVrabA_uxurhbav';
         let supabaseClient = null;
         let currentUser = null;
+        let sessionToken = null;
 
         // Initialize Supabase
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             if (window.supabase) {
                 supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
                     auth: {
@@ -2216,7 +2217,7 @@ TECHNOLOGIE-STACK:
             }
 
             // Check for existing session
-            checkSession();
+            await checkSession();
         });
 
         // ============================================
@@ -2247,51 +2248,37 @@ TECHNOLOGIE-STACK:
             document.getElementById('loginLoading').style.display = 'block';
 
             try {
-                // Hash password and verify via secure server-side function
+                // Hash password and login via session-based RPC
                 const passwordHash = await hashPassword(password);
                 const { data, error } = await supabaseClient
-                    .rpc('verify_login', { 
+                    .rpc('login_with_session', { 
                         p_username: username, 
                         p_password_hash: passwordHash 
                     });
 
-                if (error || !data) {
-                    throw new Error('Ungültige Anmeldedaten');
+                if (error || !data || data.error) {
+                    throw new Error(data?.error || 'Ungültige Anmeldedaten');
                 }
 
-                // Get permissions
-                const { data: permData } = await supabaseClient
-                    .from('role_permissions')
-                    .select('permissions')
-                    .eq('role', data.role)
-                    .single();
+                // Store session token
+                sessionToken = data.token;
+                localStorage.setItem('morfSessionToken', sessionToken);
 
-                // Check if user is stellvertreter
-                let isStellvertreter = false;
-                if (data.role !== 'admin') {
-                    const { data: stvData } = await supabaseClient
-                        .from('admin_stellvertreter')
-                        .select('id')
-                        .eq('stellvertreter_user_id', data.id)
-                        .single();
-                    
-                    isStellvertreter = !!stvData;
-                }
-
-                // Set current user
+                // Set current user (all data comes from server in one call)
                 currentUser = {
                     id: data.id,
                     username: data.username,
                     name: data.name,
                     role: data.role,
-                    permissions: permData?.permissions || {},
-                    isStellvertreter: isStellvertreter
+                    mitarbeiter_id: data.mitarbeiter_id,
+                    permissions: data.permissions || {},
+                    isStellvertreter: data.isStellvertreter || false
                 };
 
-                // Save session
-                sessionStorage.setItem('morfUser', JSON.stringify(currentUser));
+                // Save user data
+                localStorage.setItem('morfUser', JSON.stringify(currentUser));
 
-                console.log('✅ Login successful:', currentUser.name, isStellvertreter ? '(Stellvertreter)' : '');
+                console.log('✅ Login successful (session-based):', currentUser.name, currentUser.isStellvertreter ? '(Stellvertreter)' : '');
 
                 // Show main app
                 showMainApp();
@@ -2340,7 +2327,7 @@ TECHNOLOGIE-STACK:
             updateNavigationVisibility();
 
             // Restore last view or show dashboard
-            const savedView = sessionStorage.getItem('morfCurrentView');
+            const savedView = localStorage.getItem('morfCurrentView');
             if (savedView && savedView !== 'dashboard' && document.getElementById(savedView + 'View')) {
                 showView(savedView);
             } else {
@@ -2404,9 +2391,16 @@ TECHNOLOGIE-STACK:
         function logout() {
             document.getElementById('userDropdown').classList.remove('show');
             
+            // Revoke session server-side
+            if (sessionToken) {
+                supabaseClient.rpc('logout_session', { p_token: sessionToken }).catch(() => {});
+            }
+            
             currentUser = null;
-            sessionStorage.removeItem('morfUser');
-            sessionStorage.removeItem('morfCurrentView');
+            sessionToken = null;
+            localStorage.removeItem('morfUser');
+            localStorage.removeItem('morfSessionToken');
+            localStorage.removeItem('morfCurrentView');
             
             // Hide main app
             document.getElementById('mainApp').style.display = 'none';
@@ -2479,15 +2473,30 @@ TECHNOLOGIE-STACK:
             }
         }
 
-        function checkSession() {
-            const savedUser = sessionStorage.getItem('morfUser');
-            if (savedUser) {
+        async function checkSession() {
+            const savedToken = localStorage.getItem('morfSessionToken');
+            const savedUser = localStorage.getItem('morfUser');
+            if (savedToken && savedUser) {
                 try {
+                    // Validate token server-side
+                    const { data, error } = await supabaseClient
+                        .rpc('check_session', { p_token: savedToken });
+                    
+                    if (error || !data || data.valid === false) {
+                        // Token expired or revoked
+                        localStorage.removeItem('morfSessionToken');
+                        localStorage.removeItem('morfUser');
+                        console.log('⚠️ Session abgelaufen');
+                        return;
+                    }
+                    
+                    sessionToken = savedToken;
                     currentUser = JSON.parse(savedUser);
-                    console.log('✅ Session restored:', currentUser.name);
+                    console.log('✅ Session restored (token-validated):', currentUser.name);
                     showMainApp();
                 } catch (e) {
-                    sessionStorage.removeItem('morfUser');
+                    localStorage.removeItem('morfSessionToken');
+                    localStorage.removeItem('morfUser');
                 }
             }
         }
@@ -2563,7 +2572,7 @@ TECHNOLOGIE-STACK:
             });
 
             // Save current view for F5 restore
-            sessionStorage.setItem('morfCurrentView', viewName);
+            localStorage.setItem('morfCurrentView', viewName);
 
             // Reset all filters for the target view
             resetViewFilters(viewName);
@@ -3186,50 +3195,45 @@ TECHNOLOGIE-STACK:
             if (!confirm(confirmText)) return;
             
             try {
-                // Calculate days
-                const start = new Date(von);
-                const end = new Date(bis);
-                const diffTime = Math.abs(end - start);
-                const tage = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-                
                 // Create BF entries for all affected employees
                 const entries = affectedEmployees.map(emp => ({
                     mitarbeiter_id: emp.id,
                     typ: 'BF',
                     von: von,
-                    bis: bis,
-                    tage: tage
+                    bis: bis
                 }));
                 
-                console.log('Inserting BF entries:', entries);
+                console.log('Inserting BF entries via RPC:', entries.length);
                 
-                // Use array syntax like normal abwesenheit insert
-                const { data, error } = await supabaseClient
-                    .from('abwesenheits_perioden')
-                    .insert(entries);
+                const { data: result, error } = await supabaseClient
+                    .rpc('bulk_manage_abwesenheiten', {
+                        p_session_token: sessionToken,
+                        p_operation: 'insert',
+                        p_entries: entries
+                    });
                 
-                if (error) {
-                    console.error('Supabase error:', error);
-                    throw error;
-                }
-                
-                console.log('Insert successful, count:', entries.length);
+                if (error) throw error;
+                if (result && result.error) throw new Error(result.error);
+                console.log('✅ BF Insert successful:', result);
                 
                 // Save BF templates for future employees
                 const vorlagen = [];
                 if (verwaltung) {
-                    vorlagen.push({ typ: 'BF', name: `Betriebsferien ${von}`, von, bis, tage, gruppe: 'VW', jaehrlich: false });
+                    vorlagen.push({ typ: 'BF', name: `Betriebsferien ${von}`, von, bis, gruppe: 'VW', jaehrlich: false });
                 }
                 if (filialen) {
-                    vorlagen.push({ typ: 'BF', name: `Betriebsferien ${von}`, von, bis, tage, gruppe: 'FB', jaehrlich: false });
+                    vorlagen.push({ typ: 'BF', name: `Betriebsferien ${von}`, von, bis, gruppe: 'FB', jaehrlich: false });
                 }
-                const { error: vorlageError } = await supabaseClient
-                    .from('bf_ft_vorlagen')
-                    .insert(vorlagen);
+                const { data: vorlageResult, error: vorlageError } = await supabaseClient
+                    .rpc('manage_bf_ft_vorlagen', {
+                        p_session_token: sessionToken,
+                        p_operation: 'insert',
+                        p_entries: vorlagen
+                    });
                 if (vorlageError) {
                     console.error('⚠️ Vorlage-Speicherung fehlgeschlagen:', vorlageError);
                 } else {
-                    console.log(`✅ ${vorlagen.length} BF-Vorlagen gespeichert`);
+                    console.log(`✅ BF-Vorlagen gespeichert`);
                 }
 
                 closeBetriebsferienDialog();
@@ -3404,23 +3408,34 @@ TECHNOLOGIE-STACK:
                 };
 
                 if (editId) {
-                    // Update
-                    const { error } = await supabaseClient
-                        .from('abwesenheits_perioden')
-                        .update(abwData)
-                        .eq('id', parseInt(editId));
+                    // Update via RPC
+                    const { data: result, error } = await supabaseClient
+                        .rpc('update_abwesenheit', {
+                            p_session_token: sessionToken,
+                            p_id: parseInt(editId),
+                            p_mitarbeiter_id: mitarbeiterId,
+                            p_typ: typ,
+                            p_von: finalVon,
+                            p_bis: finalBis
+                        });
 
                     if (error) throw error;
-                    console.log('✅ Abwesenheit updated');
+                    if (result && result.error) throw new Error(result.error);
+                    console.log('✅ Abwesenheit updated (via RPC)');
                 } else {
-                    // Insert
-                    abwData.id = Date.now();
-                    const { error } = await supabaseClient
-                        .from('abwesenheits_perioden')
-                        .insert([abwData]);
+                    // Insert via RPC
+                    const { data: result, error } = await supabaseClient
+                        .rpc('create_abwesenheit', {
+                            p_session_token: sessionToken,
+                            p_mitarbeiter_id: mitarbeiterId,
+                            p_typ: typ,
+                            p_von: finalVon,
+                            p_bis: finalBis
+                        });
 
                     if (error) throw error;
-                    console.log('✅ Abwesenheit created');
+                    if (result && result.error) throw new Error(result.error);
+                    console.log('✅ Abwesenheit created (via RPC)');
                 }
 
                 closeAbwesenheitDialog();
@@ -3704,29 +3719,26 @@ TECHNOLOGIE-STACK:
             if (!confirm(confirmText)) return;
             
             try {
-                // Delete old entries
+                // Delete old entries via RPC
                 const oldIds = entries.map(e => e.id);
-                await supabaseClient
-                    .from('abwesenheits_perioden')
-                    .delete()
-                    .in('id', oldIds);
+                const { data: delResult, error: delError } = await supabaseClient
+                    .rpc('bulk_manage_abwesenheiten', {
+                        p_session_token: sessionToken,
+                        p_operation: 'delete_ids',
+                        p_delete_ids: oldIds
+                    });
+                if (delError) throw delError;
+                if (delResult && delResult.error) throw new Error(delResult.error);
                 
                 // Get affected employees with new filialen
                 const affectedEmployees = allMitarbeiter.filter(m => 
                     m.aktiv && newFilialen.includes(m.filiale)
                 );
                 
-                // Calculate days
-                const start = new Date(newBis);
-                const end = new Date(newVon);
-                const diffTime = Math.abs(start - end);
-                const tage = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-                
                 // Create new entries
                 const newEntries = [];
                 
                 if (isRecurring) {
-                    // Recreate for all years
                     const years = [...new Set(entries.map(e => e.von.split('-')[0]))].sort();
                     years.forEach(year => {
                         const yearVon = `${year}-${newVonParts[1]}-${newVonParts[2]}`;
@@ -3737,29 +3749,30 @@ TECHNOLOGIE-STACK:
                                 mitarbeiter_id: emp.id,
                                 typ: typ,
                                 von: yearVon,
-                                bis: yearBis,
-                                tage: tage
+                                bis: yearBis
                             });
                         });
                     });
                 } else {
-                    // Single entry
                     affectedEmployees.forEach(emp => {
                         newEntries.push({
                             mitarbeiter_id: emp.id,
                             typ: typ,
                             von: newVon,
-                            bis: newBis,
-                            tage: tage
+                            bis: newBis
                         });
                     });
                 }
                 
-                const { error } = await supabaseClient
-                    .from('abwesenheits_perioden')
-                    .insert(newEntries);
+                const { data: insResult, error: insError } = await supabaseClient
+                    .rpc('bulk_manage_abwesenheiten', {
+                        p_session_token: sessionToken,
+                        p_operation: 'insert',
+                        p_entries: newEntries
+                    });
                 
-                if (error) throw error;
+                if (insError) throw insError;
+                if (insResult && insResult.error) throw new Error(insResult.error);
                 
                 closeEditBfFtDialog();
                 closeLoeschenDialog();
@@ -3780,26 +3793,33 @@ TECHNOLOGIE-STACK:
             try {
                 const ids = entries.map(e => e.id);
                 
-                const { error } = await supabaseClient
-                    .from('abwesenheits_perioden')
-                    .delete()
-                    .in('id', ids);
+                const { data: result, error } = await supabaseClient
+                    .rpc('bulk_manage_abwesenheiten', {
+                        p_session_token: sessionToken,
+                        p_operation: 'delete_ids',
+                        p_delete_ids: ids
+                    });
                 
                 if (error) throw error;
+                if (result && result.error) throw new Error(result.error);
                 
                 // Also delete matching vorlagen
-                for (const entry of entries) {
+                const uniqueDates = [...new Set(entries.map(e => `${e.von}|${e.bis}`))];
+                for (const dateKey of uniqueDates) {
+                    const [von, bis] = dateKey.split('|');
                     await supabaseClient
-                        .from('bf_ft_vorlagen')
-                        .delete()
-                        .eq('typ', typ)
-                        .eq('von', entry.von)
-                        .eq('bis', entry.bis);
+                        .rpc('manage_bf_ft_vorlagen', {
+                            p_session_token: sessionToken,
+                            p_operation: 'delete',
+                            p_delete_typ: typ,
+                            p_delete_von: von,
+                            p_delete_bis: bis
+                        });
                 }
-                console.log('✅ Vorlagen ebenfalls gelöscht');
+                console.log('✅ Vorlagen ebenfalls gelöscht (via RPC)');
                 
                 await loadKalender();
-                loadBfFtList(); // Refresh list
+                loadBfFtList();
                 
             } catch (error) {
                 console.error('Error:', error);
@@ -3814,26 +3834,35 @@ TECHNOLOGIE-STACK:
             if (!confirm(confirmText)) return;
             
             try {
-                const { error } = await supabaseClient
-                    .from('abwesenheits_perioden')
-                    .delete()
-                    .eq('typ', typ)
-                    .eq('von', von)
-                    .eq('bis', bis);
+                // Find matching IDs from loaded data
+                const matchingIds = allAbwesenheiten
+                    .filter(a => a.typ === typ && a.von === von && a.bis === bis)
+                    .map(a => a.id);
                 
-                if (error) throw error;
+                if (matchingIds.length > 0) {
+                    const { data: result, error } = await supabaseClient
+                        .rpc('bulk_manage_abwesenheiten', {
+                            p_session_token: sessionToken,
+                            p_operation: 'delete_ids',
+                            p_delete_ids: matchingIds
+                        });
+                    if (error) throw error;
+                    if (result && result.error) throw new Error(result.error);
+                }
                 
                 // Also delete matching vorlagen
                 await supabaseClient
-                    .from('bf_ft_vorlagen')
-                    .delete()
-                    .eq('typ', typ)
-                    .eq('von', von)
-                    .eq('bis', bis);
-                console.log('✅ Vorlagen ebenfalls gelöscht');
+                    .rpc('manage_bf_ft_vorlagen', {
+                        p_session_token: sessionToken,
+                        p_operation: 'delete',
+                        p_delete_typ: typ,
+                        p_delete_von: von,
+                        p_delete_bis: bis
+                    });
+                console.log('✅ Vorlagen ebenfalls gelöscht (via RPC)');
                 
                 await loadKalender();
-                loadBfFtList(); // Refresh list
+                loadBfFtList();
                 
             } catch (error) {
                 console.error('Error:', error);
@@ -3946,12 +3975,6 @@ TECHNOLOGIE-STACK:
             if (!confirm(confirmText)) return;
             
             try {
-                // Calculate days
-                const start = new Date(von);
-                const end = new Date(bis);
-                const diffTime = Math.abs(end - start);
-                const tage = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-                
                 // Create FT entries for all affected employees and years
                 const entries = [];
                 
@@ -3966,24 +3989,23 @@ TECHNOLOGIE-STACK:
                             mitarbeiter_id: emp.id,
                             typ: 'FT',
                             von: yearVon.toISOString().split('T')[0],
-                            bis: yearBis.toISOString().split('T')[0],
-                            tage: tage
+                            bis: yearBis.toISOString().split('T')[0]
                         });
                     });
                 }
                 
-                console.log('Inserting FT entries:', entries.length, 'entries');
+                console.log('Inserting FT entries via RPC:', entries.length, 'entries');
                 
-                const { data, error } = await supabaseClient
-                    .from('abwesenheits_perioden')
-                    .insert(entries);
+                const { data: result, error } = await supabaseClient
+                    .rpc('bulk_manage_abwesenheiten', {
+                        p_session_token: sessionToken,
+                        p_operation: 'insert',
+                        p_entries: entries
+                    });
                 
-                if (error) {
-                    console.error('Supabase error:', error);
-                    throw error;
-                }
-                
-                console.log('Insert successful');
+                if (error) throw error;
+                if (result && result.error) throw new Error(result.error);
+                console.log('✅ FT Insert successful:', result);
                 
                 // Save FT templates for future employees
                 const vorlagen = [];
@@ -4001,19 +4023,21 @@ TECHNOLOGIE-STACK:
                             name: name,
                             von: vonStr,
                             bis: bisStr,
-                            tage: tage,
                             gruppe: fil,
                             jaehrlich: jaehrlich
                         });
                     });
                 }
-                const { error: vorlageError } = await supabaseClient
-                    .from('bf_ft_vorlagen')
-                    .insert(vorlagen);
+                const { data: vorlageResult, error: vorlageError } = await supabaseClient
+                    .rpc('manage_bf_ft_vorlagen', {
+                        p_session_token: sessionToken,
+                        p_operation: 'insert',
+                        p_entries: vorlagen
+                    });
                 if (vorlageError) {
                     console.error('⚠️ Vorlage-Speicherung fehlgeschlagen:', vorlageError);
                 } else {
-                    console.log(`✅ ${vorlagen.length} FT-Vorlagen gespeichert`);
+                    console.log(`✅ FT-Vorlagen gespeichert`);
                 }
 
                 closeFeiertagDialog();
@@ -4068,26 +4092,17 @@ TECHNOLOGIE-STACK:
             }
             
             try {
-                // Calculate days
-                const start = new Date(von);
-                const end = new Date(bis);
-                const diffTime = Math.abs(end - start);
-                const tage = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-                
-                // Create ARB entry
-                const arbData = {
-                    mitarbeiter_id: mitarbeiterId,
-                    typ: 'ARB',
-                    von: von,
-                    bis: bis,
-                    tage: tage
-                };
-                
-                const { error } = await supabaseClient
-                    .from('abwesenheits_perioden')
-                    .insert([arbData]);
+                const { data: result, error } = await supabaseClient
+                    .rpc('create_abwesenheit', {
+                        p_session_token: sessionToken,
+                        p_mitarbeiter_id: mitarbeiterId,
+                        p_typ: 'ARB',
+                        p_von: von,
+                        p_bis: bis
+                    });
                 
                 if (error) throw error;
+                if (result && result.error) throw new Error(result.error);
                 
                 closeKannArbeitenDialog();
                 closeAbwesenheitDialog();
@@ -4126,10 +4141,13 @@ TECHNOLOGIE-STACK:
             try {
                 // Case 1: Delete range matches entire period - delete completely
                 if (deleteVon === originalVon && deleteBis === originalBis) {
-                    await supabaseClient
-                        .from('abwesenheits_perioden')
-                        .delete()
-                        .eq('id', parseInt(id));
+                    const { data: result, error } = await supabaseClient
+                        .rpc('delete_abwesenheit_by_id', {
+                            p_session_token: sessionToken,
+                            p_id: parseInt(id)
+                        });
+                    if (error) throw error;
+                    if (result && result.error) throw new Error(result.error);
                 }
                 // Case 2: Delete from beginning - keep end part
                 else if (deleteVon === originalVon && deleteBis < originalBis) {
@@ -4137,18 +4155,14 @@ TECHNOLOGIE-STACK:
                     newVon.setDate(newVon.getDate() + 1);
                     const newVonStr = newVon.toISOString().split('T')[0];
                     
-                    const start = new Date(newVonStr);
-                    const end = new Date(originalBis);
-                    const diffTime = Math.abs(end - start);
-                    const newTage = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-                    
-                    await supabaseClient
-                        .from('abwesenheits_perioden')
-                        .update({ 
-                            von: newVonStr,
-                            tage: newTage
-                        })
-                        .eq('id', parseInt(id));
+                    const { data: result, error } = await supabaseClient
+                        .rpc('update_abwesenheit', {
+                            p_session_token: sessionToken,
+                            p_id: parseInt(id),
+                            p_von: newVonStr
+                        });
+                    if (error) throw error;
+                    if (result && result.error) throw new Error(result.error);
                 }
                 // Case 3: Delete from end - keep beginning part
                 else if (deleteVon > originalVon && deleteBis === originalBis) {
@@ -4156,18 +4170,14 @@ TECHNOLOGIE-STACK:
                     newBis.setDate(newBis.getDate() - 1);
                     const newBisStr = newBis.toISOString().split('T')[0];
                     
-                    const start = new Date(originalVon);
-                    const end = new Date(newBisStr);
-                    const diffTime = Math.abs(end - start);
-                    const newTage = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-                    
-                    await supabaseClient
-                        .from('abwesenheits_perioden')
-                        .update({ 
-                            bis: newBisStr,
-                            tage: newTage
-                        })
-                        .eq('id', parseInt(id));
+                    const { data: result, error } = await supabaseClient
+                        .rpc('update_abwesenheit', {
+                            p_session_token: sessionToken,
+                            p_id: parseInt(id),
+                            p_bis: newBisStr
+                        });
+                    if (error) throw error;
+                    if (result && result.error) throw new Error(result.error);
                 }
                 // Case 4: Delete from middle - split into two periods
                 else if (deleteVon > originalVon && deleteBis < originalBis) {
@@ -4179,47 +4189,37 @@ TECHNOLOGIE-STACK:
                     dayAfterDelete.setDate(dayAfterDelete.getDate() + 1);
                     const dayAfterStr = dayAfterDelete.toISOString().split('T')[0];
                     
-                    // Calculate days for first period
-                    const start1 = new Date(originalVon);
-                    const end1 = new Date(dayBeforeStr);
-                    const diffTime1 = Math.abs(end1 - start1);
-                    const tage1 = Math.ceil(diffTime1 / (1000 * 60 * 60 * 24)) + 1;
-                    
-                    // Calculate days for second period
-                    const start2 = new Date(dayAfterStr);
-                    const end2 = new Date(originalBis);
-                    const diffTime2 = Math.abs(end2 - start2);
-                    const tage2 = Math.ceil(diffTime2 / (1000 * 60 * 60 * 24)) + 1;
-                    
                     // Update existing period to end before delete range
-                    await supabaseClient
-                        .from('abwesenheits_perioden')
-                        .update({ 
-                            bis: dayBeforeStr,
-                            tage: tage1
-                        })
-                        .eq('id', parseInt(id));
+                    const { data: result1, error: err1 } = await supabaseClient
+                        .rpc('update_abwesenheit', {
+                            p_session_token: sessionToken,
+                            p_id: parseInt(id),
+                            p_bis: dayBeforeStr
+                        });
+                    if (err1) throw err1;
+                    if (result1 && result1.error) throw new Error(result1.error);
                     
                     // Create new period starting after delete range
-                    const newPeriod = {
-                        id: Date.now(),
-                        mitarbeiter_id: currentAbsence.mitarbeiter_id,
-                        typ: currentAbsence.typ,
-                        von: dayAfterStr,
-                        bis: originalBis,
-                        tage: tage2,
-                        erfasst_am: new Date().toISOString()
-                    };
+                    const mitId = typeof currentAbsence.mitarbeiter_id === 'string' 
+                        ? parseInt(currentAbsence.mitarbeiter_id) 
+                        : currentAbsence.mitarbeiter_id;
                     
-                    await supabaseClient
-                        .from('abwesenheits_perioden')
-                        .insert([newPeriod]);
+                    const { data: result2, error: err2 } = await supabaseClient
+                        .rpc('create_abwesenheit', {
+                            p_session_token: sessionToken,
+                            p_mitarbeiter_id: mitId,
+                            p_typ: currentAbsence.typ,
+                            p_von: dayAfterStr,
+                            p_bis: originalBis
+                        });
+                    if (err2) throw err2;
+                    if (result2 && result2.error) throw new Error(result2.error);
                 } else {
                     alert('⚠️ Ungültiger Löschbereich. Bitte passen Sie die Daten an.');
                     return;
                 }
 
-                console.log('✅ Abwesenheit gelöscht/angepasst');
+                console.log('✅ Abwesenheit gelöscht/angepasst (via RPC)');
                 closeAbwesenheitDialog();
                 await loadKalender();
 
@@ -4348,29 +4348,17 @@ TECHNOLOGIE-STACK:
 
         async function toggleStellvertreter(userId, isChecked) {
             try {
-                if (isChecked) {
-                    // Add stellvertreter
-                    const { error } = await supabaseClient
-                        .from('admin_stellvertreter')
-                        .insert([{
-                            admin_user_id: currentUser.id,
-                            stellvertreter_user_id: userId
-                        }]);
+                const { data, error } = await supabaseClient
+                    .rpc('toggle_stellvertreter', {
+                        p_session_token: sessionToken,
+                        p_target_user_id: userId,
+                        p_active: isChecked
+                    });
 
-                    if (error) throw error;
-                    console.log('✅ Stellvertreter added:', userId);
-                } else {
-                    // Remove stellvertreter
-                    const { error } = await supabaseClient
-                        .from('admin_stellvertreter')
-                        .delete()
-                        .eq('admin_user_id', currentUser.id)
-                        .eq('stellvertreter_user_id', userId);
+                if (error) throw error;
+                if (data && data.error) throw new Error(data.error);
 
-                    if (error) throw error;
-                    console.log('✅ Stellvertreter removed:', userId);
-                }
-
+                console.log(isChecked ? '✅ Stellvertreter added:' : '✅ Stellvertreter removed:', userId);
                 showSaveIndicator();
 
             } catch (error) {
@@ -4471,30 +4459,28 @@ TECHNOLOGIE-STACK:
 
         async function updatePermission(role, permission, value) {
             try {
-                // Find role
-                const roleData = allRoles.find(r => r.role === role);
-                if (!roleData) return;
-
-                // Update permission
-                roleData.permissions[permission] = value;
-
-                // Save to database
-                const { error } = await supabaseClient
-                    .from('role_permissions')
-                    .update({ permissions: roleData.permissions })
-                    .eq('role', role);
+                const { data, error } = await supabaseClient
+                    .rpc('update_role_permission', {
+                        p_session_token: sessionToken,
+                        p_role: role,
+                        p_permission: permission,
+                        p_value: value
+                    });
 
                 if (error) throw error;
+                if (data && data.error) throw new Error(data.error);
+
+                // Update local data
+                const roleData = allRoles.find(r => r.role === role);
+                if (roleData) roleData.permissions[permission] = value;
 
                 console.log(`✅ Permission updated: ${role}.${permission} = ${value}`);
-                
-                // Show save indicator
                 showSaveIndicator();
 
                 // If current user's role was changed, reload their permissions
                 if (currentUser.role === role) {
                     currentUser.permissions = roleData.permissions;
-                    sessionStorage.setItem('morfUser', JSON.stringify(currentUser));
+                    localStorage.setItem('morfUser', JSON.stringify(currentUser));
                     updateNavigationVisibility();
                 }
 
@@ -5167,81 +5153,7 @@ TECHNOLOGIE-STACK:
 
         // Assign future BF/FT entries to a newly created or filiale-changed employee
         // Reads from bf_ft_vorlagen table instead of searching colleagues
-        async function assignFutureBfFtToEmployee(newMitarbeiterId, filiale) {
-            try {
-                const today = new Date().toISOString().split('T')[0];
-                const isVerwaltung = filiale === 'VW';
-                const bfGruppe = isVerwaltung ? 'VW' : 'FB';
-                console.log(`🔄 BF/FT-Zuweisung Start: MA-ID=${newMitarbeiterId}, Filiale=${filiale}, BF-Gruppe=${bfGruppe}, heute=${today}`);
-
-                const newEntries = [];
-
-                // --- BF-Vorlagen laden (VW oder FB) ---
-                const { data: bfVorlagen, error: bfError } = await supabaseClient
-                    .from('bf_ft_vorlagen')
-                    .select('von, bis, tage')
-                    .eq('typ', 'BF')
-                    .eq('gruppe', bfGruppe)
-                    .gte('bis', today);
-
-                if (bfError) {
-                    console.error('⚠️ BF-Vorlagen Fehler:', bfError);
-                } else {
-                    console.log(`📋 BF-Vorlagen (${bfGruppe}): ${(bfVorlagen || []).length}`, bfVorlagen);
-                    (bfVorlagen || []).forEach(v => {
-                        newEntries.push({
-                            mitarbeiter_id: newMitarbeiterId,
-                            typ: 'BF',
-                            von: v.von,
-                            bis: v.bis,
-                            tage: v.tage
-                        });
-                    });
-                }
-
-                // --- FT-Vorlagen laden (für die spezifische Filiale) ---
-                const { data: ftVorlagen, error: ftError } = await supabaseClient
-                    .from('bf_ft_vorlagen')
-                    .select('von, bis, tage')
-                    .eq('typ', 'FT')
-                    .eq('gruppe', filiale)
-                    .gte('bis', today);
-
-                if (ftError) {
-                    console.error('⚠️ FT-Vorlagen Fehler:', ftError);
-                } else {
-                    console.log(`📋 FT-Vorlagen (${filiale}): ${(ftVorlagen || []).length}`, ftVorlagen);
-                    (ftVorlagen || []).forEach(v => {
-                        newEntries.push({
-                            mitarbeiter_id: newMitarbeiterId,
-                            typ: 'FT',
-                            von: v.von,
-                            bis: v.bis,
-                            tage: v.tage
-                        });
-                    });
-                }
-
-                if (newEntries.length === 0) {
-                    console.log('ℹ️ Keine BF/FT-Vorlagen gefunden');
-                    return;
-                }
-
-                console.log(`📋 Erstelle ${newEntries.length} BF/FT-Einträge aus Vorlagen:`, newEntries);
-                const { error: insertError } = await supabaseClient
-                    .from('abwesenheits_perioden')
-                    .insert(newEntries);
-
-                if (insertError) {
-                    console.error('❌ Insert Fehler:', insertError);
-                    throw insertError;
-                }
-                console.log(`✅ ${newEntries.length} BF/FT-Einträge erfolgreich erstellt`);
-
-            } catch (error) {
-                console.error('⚠️ Fehler bei BF/FT-Zuweisung:', error);
-            }
-        }
+        // assignFutureBfFtToEmployee - removed, now handled server-side by create_mitarbeiter / update_mitarbeiter RPCs
 
         async function saveMitarbeiter(event) {
             event.preventDefault();
@@ -5289,66 +5201,45 @@ TECHNOLOGIE-STACK:
             try {
                 const mitarbeiterId = editId ? parseInt(editId) : Date.now();
 
-                const mitarbeiterData = {
-                    vorname,
-                    nachname,
-                    personal_id: personalId || null,
-                    funktion,
-                    filiale,
-                    aktiv,
-                    teamgroesse: funktion === 'EC' ? parseInt(teamgroesse) : null,
-                    assigned_ec: funktion === 'MA' && zugewiesen ? parseInt(zugewiesen) : null
-                };
-
                 if (editId) {
-                    // Check if filiale changed
-                    const oldMitarbeiter = allMitarbeiter.find(m => m.id === mitarbeiterId);
-                    const filialeChanged = oldMitarbeiter && oldMitarbeiter.filiale !== filiale;
-                    const oldFiliale = oldMitarbeiter ? oldMitarbeiter.filiale : null;
-
-                    // Update mitarbeiter
-                    const { error } = await supabaseClient
-                        .from('mitarbeiter')
-                        .update(mitarbeiterData)
-                        .eq('id', mitarbeiterId);
+                    // Update via RPC
+                    const { data: updateResult, error } = await supabaseClient
+                        .rpc('update_mitarbeiter', {
+                            p_session_token: sessionToken,
+                            p_mitarbeiter_id: mitarbeiterId,
+                            p_vorname: vorname,
+                            p_nachname: nachname,
+                            p_personal_id: personalId || null,
+                            p_funktion: funktion,
+                            p_filiale: filiale,
+                            p_aktiv: aktiv,
+                            p_teamgroesse: funktion === 'EC' ? parseInt(teamgroesse) : null,
+                            p_assigned_ec: funktion === 'MA' && zugewiesen ? parseInt(zugewiesen) : null,
+                            p_clear_assigned_ec: funktion === 'MA' && !zugewiesen
+                        });
 
                     if (error) throw error;
-                    console.log('✅ Mitarbeiter updated');
-
-                    // If filiale changed, reassign future BF/FT
-                    if (filialeChanged) {
-                        console.log(`📋 Filiale geändert: ${oldFiliale} → ${filiale}, BF/FT werden aktualisiert...`);
-                        
-                        // Remove future BF/FT entries for this employee
-                        const today = new Date().toISOString().split('T')[0];
-                        const { error: delError } = await supabaseClient
-                            .from('abwesenheits_perioden')
-                            .delete()
-                            .eq('mitarbeiter_id', mitarbeiterId)
-                            .in('typ', ['BF', 'FT'])
-                            .gte('bis', today);
-                        
-                        if (delError) {
-                            console.error('⚠️ Fehler beim Entfernen alter BF/FT:', delError);
-                        } else {
-                            console.log('✅ Alte zukünftige BF/FT entfernt');
-                        }
-
-                        // Assign new BF/FT based on new filiale
-                        await assignFutureBfFtToEmployee(mitarbeiterId, filiale);
-                    }
+                    if (updateResult && updateResult.error) throw new Error(updateResult.error);
+                    console.log('✅ Mitarbeiter updated (via RPC)');
                 } else {
-                    // Insert new mitarbeiter
-                    mitarbeiterData.id = mitarbeiterId;
-                    const { error } = await supabaseClient
-                        .from('mitarbeiter')
-                        .insert([mitarbeiterData]);
+                    // Create via RPC
+                    const { data: createResult, error } = await supabaseClient
+                        .rpc('create_mitarbeiter', {
+                            p_session_token: sessionToken,
+                            p_id: mitarbeiterId,
+                            p_vorname: vorname,
+                            p_nachname: nachname,
+                            p_personal_id: personalId || null,
+                            p_funktion: funktion,
+                            p_filiale: filiale,
+                            p_aktiv: aktiv,
+                            p_teamgroesse: funktion === 'EC' ? parseInt(teamgroesse) : null,
+                            p_assigned_ec: funktion === 'MA' && zugewiesen ? parseInt(zugewiesen) : null
+                        });
 
                     if (error) throw error;
-                    console.log('✅ Mitarbeiter created');
-
-                    // Assign future BF/FT entries to new employee
-                    await assignFutureBfFtToEmployee(mitarbeiterId, filiale);
+                    if (createResult && createResult.error) throw new Error(createResult.error);
+                    console.log('✅ Mitarbeiter created (via RPC)');
                 }
 
                 // Handle system user
@@ -5434,14 +5325,16 @@ TECHNOLOGIE-STACK:
             }
 
             try {
-                const { error } = await supabaseClient
-                    .from('mitarbeiter')
-                    .update({ aktiv: newStatus })
-                    .eq('id', id);
+                const { data: result, error } = await supabaseClient
+                    .rpc('toggle_mitarbeiter_status', {
+                        p_session_token: sessionToken,
+                        p_mitarbeiter_id: id
+                    });
 
                 if (error) throw error;
+                if (result && result.error) throw new Error(result.error);
 
-                console.log(`✅ Mitarbeiter ${action}d`);
+                console.log(`✅ Mitarbeiter ${action}d (via RPC)`);
                 await loadMitarbeiter();
 
             } catch (error) {
@@ -5464,14 +5357,16 @@ TECHNOLOGIE-STACK:
             }
 
             try {
-                const { error } = await supabaseClient
-                    .from('mitarbeiter')
-                    .delete()
-                    .eq('id', id);
+                const { data: result, error } = await supabaseClient
+                    .rpc('delete_mitarbeiter', {
+                        p_session_token: sessionToken,
+                        p_mitarbeiter_id: id
+                    });
 
                 if (error) throw error;
+                if (result && result.error) throw new Error(result.error);
 
-                console.log('✅ Mitarbeiter deleted');
+                console.log('✅ Mitarbeiter deleted (via RPC)');
                 await loadMitarbeiter();
                 await loadDashboardData();
 
@@ -6472,12 +6367,15 @@ TECHNOLOGIE-STACK:
         const base64 = cropCanvas.toDataURL('image/jpeg', 0.9);
         
         try {
-            const { error } = await supabaseClient
-                .from('mitarbeiter')
-                .update({ foto: base64 })
-                .eq('id', currentUser.mitarbeiterId);
+            const { data: result, error } = await supabaseClient
+                .rpc('update_mitarbeiter', {
+                    p_session_token: sessionToken,
+                    p_mitarbeiter_id: currentUser.mitarbeiterId,
+                    p_foto: base64
+                });
             
             if (error) throw error;
+            if (result && result.error) throw new Error(result.error);
             
             const preview = document.getElementById('profilFotoPreview');
             preview.innerHTML = `<img src="${base64}" style="width: 100%; height: 100%; object-fit: cover;">`;
@@ -6500,12 +6398,15 @@ TECHNOLOGIE-STACK:
         }
         
         try {
-            const { error } = await supabaseClient
-                .from('mitarbeiter')
-                .update({ foto: null })
-                .eq('id', currentUser.mitarbeiterId);
+            const { data: result, error } = await supabaseClient
+                .rpc('update_mitarbeiter', {
+                    p_session_token: sessionToken,
+                    p_mitarbeiter_id: currentUser.mitarbeiterId,
+                    p_foto: ''
+                });
             
             if (error) throw error;
+            if (result && result.error) throw new Error(result.error);
             
             const preview = document.getElementById('profilFotoPreview');
             preview.innerHTML = getInitials(currentUser.name);
@@ -6543,7 +6444,7 @@ TECHNOLOGIE-STACK:
     
     <!-- Version Check -->
     <div id="versionInfo" style="position: fixed; bottom: 8px; right: 8px; font-size: 10px; color: #999; background: white; padding: 4px 8px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); z-index: 9999;">
-        v2026-02-17_12:25 (Zentrales Filter-Reset alle Views)
+        v2026-02-19_15:00 (Session-Token Auth)
     </div>
 </body>
 </html>

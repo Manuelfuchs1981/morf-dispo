@@ -2393,7 +2393,7 @@ TECHNOLOGIE-STACK:
             
             // Revoke session server-side
             if (sessionToken) {
-                supabaseClient.rpc('logout_session', { p_token: sessionToken }).catch(() => {});
+                supabaseClient.rpc('logout_session', { p_token: sessionToken }).then(() => {});
             }
             
             currentUser = null;

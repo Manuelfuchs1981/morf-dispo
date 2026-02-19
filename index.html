@@ -843,7 +843,7 @@ TECHNOLOGIE-STACK:
         }
 
         .data-table th {
-            padding: 16px;
+            padding: 4px 16px;
             text-align: left;
             font-size: 13px;
             font-weight: 600;
@@ -853,7 +853,7 @@ TECHNOLOGIE-STACK:
         }
 
         .data-table td {
-            padding: 16px;
+            padding: 4px 16px;
             border-top: 1px solid var(--border);
             font-size: 14px;
         }
@@ -2507,6 +2507,9 @@ TECHNOLOGIE-STACK:
                 const alleFiliaCb = document.getElementById('allesFilialeCheckbox');
                 if (alleFunktionCb) alleFunktionCb.checked = true;
                 if (alleFiliaCb) alleFiliaCb.checked = true;
+                // Close any open filter dropdowns
+                document.querySelectorAll('.filter-dropdown').forEach(d => d.classList.remove('show'));
+                openDropdownId = null;
             }
             if (viewName === 'personal') {
                 // Reset Personal filters
@@ -4878,16 +4881,8 @@ TECHNOLOGIE-STACK:
 
                             return `
                             <tr style="${!m.aktiv ? 'background: #f5f5f5; opacity: 0.7;' : ''}">
-                                <td>
-                                    <span class="badge badge-${m.filiale.toLowerCase()}">
-                                        ${m.filiale}
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="badge badge-${m.funktion.toLowerCase()}">
-                                        ${m.funktion}
-                                    </span>
-                                </td>
+                                <td>${m.filiale}</td>
+                                <td>${m.funktion}</td>
                                 <td>${m.vorname}</td>
                                 <td><strong>${m.nachname}</strong></td>
                                 <td>${m.personal_id || '-'}</td>

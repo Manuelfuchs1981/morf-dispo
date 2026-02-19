@@ -2339,8 +2339,13 @@ TECHNOLOGIE-STACK:
             // Update navigation based on permissions
             updateNavigationVisibility();
 
-            // Load dashboard data
-            loadDashboardData();
+            // Restore last view or show dashboard
+            const savedView = sessionStorage.getItem('morfCurrentView');
+            if (savedView && savedView !== 'dashboard' && document.getElementById(savedView + 'View')) {
+                showView(savedView);
+            } else {
+                loadDashboardData();
+            }
         }
 
         function getInitials(name) {
@@ -2401,6 +2406,7 @@ TECHNOLOGIE-STACK:
             
             currentUser = null;
             sessionStorage.removeItem('morfUser');
+            sessionStorage.removeItem('morfCurrentView');
             
             // Hide main app
             document.getElementById('mainApp').style.display = 'none';
@@ -2489,7 +2495,32 @@ TECHNOLOGIE-STACK:
         // ============================================
         // NAVIGATION
         // ============================================
-        function showView(viewName) {
+        // Central filter reset for all views
+        function resetViewFilters(viewName) {
+            if (viewName === 'kalender') {
+                // Reset Kalender filters
+                selectedFunktionen = ['GL', 'FL', 'DI', 'EC', 'PL', 'TKB', 'MA', 'WS', 'BO'];
+                selectedFilialen = ['VW', 'AG', 'BO', 'GL', 'GR', 'SG', 'ZH', 'ZS', 'WS'];
+                document.querySelectorAll('.funktion-checkbox').forEach(cb => cb.checked = true);
+                document.querySelectorAll('.filiale-checkbox').forEach(cb => cb.checked = true);
+                const alleFunktionCb = document.getElementById('allesFunktionCheckbox');
+                const alleFiliaCb = document.getElementById('allesFilialeCheckbox');
+                if (alleFunktionCb) alleFunktionCb.checked = true;
+                if (alleFiliaCb) alleFiliaCb.checked = true;
+            }
+            if (viewName === 'personal') {
+                // Reset Personal filters
+                const searchEl = document.getElementById('searchMitarbeiter');
+                const filterFunktionEl = document.getElementById('filterFunktion');
+                const filterFilialeEl = document.getElementById('filterFiliale');
+                if (searchEl) searchEl.value = '';
+                if (filterFunktionEl) filterFunktionEl.value = '';
+                if (filterFilialeEl) filterFilialeEl.value = '';
+            }
+            // Future views: add reset logic here
+        }
+
+        function showView(viewName, fromNav) {
             // Check permissions
             if (viewName === 'personal' && !canViewPersonal()) {
                 alert('⛔ Keine Berechtigung für Personal-Ansicht');
@@ -2521,10 +2552,23 @@ TECHNOLOGIE-STACK:
             // Show selected view
             document.getElementById(viewName + 'View').classList.add('active');
             
-            // Mark nav item as active
-            event.target.closest('.header-nav-item').classList.add('active');
+            // Mark nav item as active (find by onclick attribute)
+            document.querySelectorAll('.header-nav-item').forEach(n => {
+                if (n.getAttribute('onclick') && n.getAttribute('onclick').includes("'" + viewName + "'")) {
+                    n.classList.add('active');
+                }
+            });
 
-            // Load data for view
+            // Save current view for F5 restore
+            sessionStorage.setItem('morfCurrentView', viewName);
+
+            // Reset all filters for the target view
+            resetViewFilters(viewName);
+
+            // Load/reload data for view
+            if (viewName === 'dashboard') {
+                loadDashboardData();
+            }
             if (viewName === 'personal') {
                 loadMitarbeiter();
             }
@@ -2548,9 +2592,6 @@ TECHNOLOGIE-STACK:
         let allAbwesenheiten = [];
 
         async function loadKalender() {
-            // Reset filters to default (all selected)
-            selectedFunktionen = ['GL', 'FL', 'DI', 'EC', 'PL', 'TKB', 'MA', 'WS', 'BO'];
-            selectedFilialen = ['VW', 'AG', 'BO', 'GL', 'GR', 'SG', 'ZH', 'ZS', 'WS'];
             
             try {
                 // Always reload mitarbeiter to get latest data
@@ -6507,7 +6548,7 @@ TECHNOLOGIE-STACK:
     
     <!-- Version Check -->
     <div id="versionInfo" style="position: fixed; bottom: 8px; right: 8px; font-size: 10px; color: #999; background: white; padding: 4px 8px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); z-index: 9999;">
-        v2026-02-17_12:00 (System-Users komplett abgesichert)
+        v2026-02-17_12:25 (Zentrales Filter-Reset alle Views)
     </div>
 </body>
 </html>

@@ -5252,13 +5252,14 @@ TECHNOLOGIE-STACK:
                         // Update existing system user via RPC
                         const { data: updateResult, error } = await supabaseClient
                             .rpc('update_system_user', {
+                                p_session_token: sessionToken,
                                 p_id: parseInt(existingUserId),
                                 p_username: username,
-                                p_password: hashedPw,
                                 p_name: `${vorname} ${nachname}`,
                                 p_role: systemRolle,
                                 p_active: aktiv,
-                                p_mitarbeiter_id: mitarbeiterId
+                                p_mitarbeiter_id: mitarbeiterId,
+                                p_password: hashedPw
                             });
 
                         if (error) throw error;
@@ -5271,6 +5272,7 @@ TECHNOLOGIE-STACK:
                         // Create new system user via RPC
                         const { data: createResult, error } = await supabaseClient
                             .rpc('create_system_user', {
+                                p_session_token: sessionToken,
                                 p_username: username,
                                 p_password: hashedPw,
                                 p_name: `${vorname} ${nachname}`,

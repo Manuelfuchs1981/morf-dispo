@@ -2170,6 +2170,16 @@ TECHNOLOGIE-STACK:
                     </div>
                 </div>
 
+                <div class="data-card" style="margin-bottom: 16px;">
+                    <div style="padding: 24px;">
+                        <h3 style="margin: 0 0 8px 0; color: var(--primary);">🗑️ Papierkorb</h3>
+                        <p style="color: var(--text-gray); font-size: 14px; margin: 0 0 16px 0;">
+                            Soft-gelöschte Einträge anzeigen und wiederherstellen.
+                        </p>
+                        <button class="btn btn-secondary" onclick="openPapierkorb()">Papierkorb öffnen</button>
+                    </div>
+                </div>
+
                 <div class="data-card">
                     <div style="padding: 24px;">
                         <h3 style="margin: 0 0 8px 0; color: var(--primary);">Rollenberechtigungen</h3>
@@ -4256,6 +4266,159 @@ TECHNOLOGIE-STACK:
         // ADMIN PANEL
         // ============================================
         let allRoles = [];
+
+        // ============================================
+        // PAPIERKORB
+        // ============================================
+        let currentPapierkorbTab = 'mitarbeiter';
+        let papierkorbLoaded = { mitarbeiter: false, abwesenheiten: false, systemuser: false };
+
+        function openPapierkorb() {
+            if (!isAdmin()) {
+                alert('⛔ Nur für Administratoren zugänglich');
+                return;
+            }
+            papierkorbLoaded = { mitarbeiter: false, abwesenheiten: false, systemuser: false };
+            currentPapierkorbTab = 'mitarbeiter';
+            document.getElementById('papierkorbModal').style.display = 'flex';
+            switchPapierkorbTab('mitarbeiter');
+        }
+
+        function closePapierkorb() {
+            document.getElementById('papierkorbModal').style.display = 'none';
+        }
+
+        function switchPapierkorbTab(tab) {
+            ['mitarbeiter', 'abwesenheiten', 'systemuser'].forEach(t => {
+                document.getElementById(`pkContent-${t}`).style.display = t === tab ? 'block' : 'none';
+                const btn = document.getElementById(`pkTab-${t}`);
+                btn.style.borderBottom = t === tab ? '3px solid var(--primary)' : '3px solid transparent';
+                btn.style.color = t === tab ? 'var(--primary)' : 'var(--text-gray)';
+            });
+            currentPapierkorbTab = tab;
+            if (!papierkorbLoaded[tab]) loadPapierkorbTab(tab);
+        }
+
+        async function loadPapierkorbTab(tab) {
+            const loadingEl = document.getElementById(`pkLoading-${tab}`);
+            const tableEl = document.getElementById(`pkTable-${tab}`);
+            loadingEl.style.display = 'block';
+            tableEl.innerHTML = '';
+
+            try {
+                let data, error;
+
+                if (tab === 'mitarbeiter') {
+                    ({ data, error } = await supabaseClient
+                        .from('mitarbeiter')
+                        .select('id, vorname, nachname, personal_id, funktion, filiale, deleted_at, deleted_by')
+                        .not('deleted_at', 'is', null)
+                        .order('deleted_at', { ascending: false }));
+                    loadingEl.style.display = 'none';
+                    if (!data || data.length === 0) {
+                        tableEl.innerHTML = '<p style="color: var(--text-gray); text-align: center; padding: 32px;">Keine gelöschten Mitarbeiter</p>';
+                    } else {
+                        tableEl.innerHTML = `<table class="data-table" style="width:100%">
+                            <thead><tr>
+                                <th>Name</th><th>Personal-ID</th><th>Funktion</th><th>Filiale</th><th>Gelöscht am</th><th></th>
+                            </tr></thead>
+                            <tbody>${data.map(r => `<tr>
+                                <td>${r.vorname} ${r.nachname}</td>
+                                <td>${r.personal_id || '–'}</td>
+                                <td>${r.funktion || '–'}</td>
+                                <td>${r.filiale || '–'}</td>
+                                <td>${new Date(r.deleted_at).toLocaleString('de-CH')}</td>
+                                <td><button class="btn btn-secondary" style="padding: 4px 12px; font-size: 12px;" onclick="restorePapierkorbEntry('mitarbeiter', ${r.id})">↩ Wiederherstellen</button></td>
+                            </tr>`).join('')}</tbody>
+                        </table>`;
+                    }
+
+                } else if (tab === 'abwesenheiten') {
+                    ({ data, error } = await supabaseClient
+                        .from('abwesenheits_perioden')
+                        .select('id, mitarbeiter_id, typ, von, bis, tage, deleted_at')
+                        .not('deleted_at', 'is', null)
+                        .order('deleted_at', { ascending: false }));
+                    // Mitarbeiternamen auflösen
+                    const maMap = {};
+                    allMitarbeiter.forEach(m => maMap[m.id] = `${m.vorname} ${m.nachname}`);
+                    loadingEl.style.display = 'none';
+                    if (!data || data.length === 0) {
+                        tableEl.innerHTML = '<p style="color: var(--text-gray); text-align: center; padding: 32px;">Keine gelöschten Abwesenheiten</p>';
+                    } else {
+                        tableEl.innerHTML = `<table class="data-table" style="width:100%">
+                            <thead><tr>
+                                <th>Mitarbeiter</th><th>Typ</th><th>Von</th><th>Bis</th><th>Tage</th><th>Gelöscht am</th><th></th>
+                            </tr></thead>
+                            <tbody>${data.map(r => `<tr>
+                                <td>${maMap[r.mitarbeiter_id] || r.mitarbeiter_id}</td>
+                                <td><span style="font-weight:600">${r.typ}</span></td>
+                                <td>${r.von}</td><td>${r.bis}</td><td>${r.tage}</td>
+                                <td>${new Date(r.deleted_at).toLocaleString('de-CH')}</td>
+                                <td><button class="btn btn-secondary" style="padding: 4px 12px; font-size: 12px;" onclick="restorePapierkorbEntry('abwesenheiten', ${r.id})">↩ Wiederherstellen</button></td>
+                            </tr>`).join('')}</tbody>
+                        </table>`;
+                    }
+
+                } else if (tab === 'systemuser') {
+                    ({ data, error } = await supabaseClient
+                        .from('system_users')
+                        .select('id, username, name, role, deleted_at')
+                        .not('deleted_at', 'is', null)
+                        .order('deleted_at', { ascending: false }));
+                    loadingEl.style.display = 'none';
+                    if (!data || data.length === 0) {
+                        tableEl.innerHTML = '<p style="color: var(--text-gray); text-align: center; padding: 32px;">Keine gelöschten System-User</p>';
+                    } else {
+                        tableEl.innerHTML = `<table class="data-table" style="width:100%">
+                            <thead><tr>
+                                <th>Username</th><th>Name</th><th>Rolle</th><th>Gelöscht am</th><th></th>
+                            </tr></thead>
+                            <tbody>${data.map(r => `<tr>
+                                <td>${r.username}</td>
+                                <td>${r.name}</td>
+                                <td>${r.role}</td>
+                                <td>${new Date(r.deleted_at).toLocaleString('de-CH')}</td>
+                                <td><button class="btn btn-secondary" style="padding: 4px 12px; font-size: 12px;" onclick="restorePapierkorbEntry('systemuser', ${r.id})">↩ Wiederherstellen</button></td>
+                            </tr>`).join('')}</tbody>
+                        </table>`;
+                    }
+                }
+
+                papierkorbLoaded[tab] = true;
+            } catch (err) {
+                loadingEl.style.display = 'none';
+                tableEl.innerHTML = `<p style="color: red; padding: 16px;">Fehler beim Laden: ${err.message}</p>`;
+            }
+        }
+
+        async function restorePapierkorbEntry(type, id) {
+            if (!confirm('Eintrag wirklich wiederherstellen?')) return;
+            try {
+                let rpcName;
+                if (type === 'mitarbeiter') rpcName = 'restore_mitarbeiter';
+                else if (type === 'abwesenheiten') rpcName = 'restore_abwesenheit';
+                else if (type === 'systemuser') rpcName = 'restore_system_user';
+
+                const { data, error } = await supabaseClient.rpc(rpcName, {
+                    p_session_token: sessionToken,
+                    p_id: id
+                });
+
+                if (error || data?.error) throw new Error(data?.error || error?.message);
+
+                // Tab neu laden
+                papierkorbLoaded[type] = false;
+                loadPapierkorbTab(type);
+
+                // Globale Daten aktualisieren
+                if (type === 'mitarbeiter') await loadMitarbeiter();
+                else if (type === 'abwesenheiten') await loadKalender();
+
+            } catch (err) {
+                alert('Fehler beim Wiederherstellen: ' + err.message);
+            }
+        }
 
         function openBerechtigungen() {
             if (!isAdmin()) {
@@ -6444,9 +6607,46 @@ TECHNOLOGIE-STACK:
     }
     </script>
     
+    <!-- Papierkorb Modal -->
+    <div id="papierkorbModal" class="modal" style="display: none;">
+        <div class="modal-overlay" onclick="closePapierkorb()"></div>
+        <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h2>🗑️ Papierkorb</h2>
+                <button class="modal-close" onclick="closePapierkorb()">✕</button>
+            </div>
+            <div class="modal-body">
+                <!-- Tabs -->
+                <div style="display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 0;">
+                    <button id="pkTab-mitarbeiter" onclick="switchPapierkorbTab('mitarbeiter')" style="padding: 8px 16px; border: none; background: none; cursor: pointer; font-weight: 600; font-size: 14px; border-bottom: 3px solid var(--primary); margin-bottom: -2px; color: var(--primary);">👥 Mitarbeiter</button>
+                    <button id="pkTab-abwesenheiten" onclick="switchPapierkorbTab('abwesenheiten')" style="padding: 8px 16px; border: none; background: none; cursor: pointer; font-weight: 600; font-size: 14px; border-bottom: 3px solid transparent; margin-bottom: -2px; color: var(--text-gray);">📅 Abwesenheiten</button>
+                    <button id="pkTab-systemuser" onclick="switchPapierkorbTab('systemuser')" style="padding: 8px 16px; border: none; background: none; cursor: pointer; font-weight: 600; font-size: 14px; border-bottom: 3px solid transparent; margin-bottom: -2px; color: var(--text-gray);">🔐 System-User</button>
+                </div>
+
+                <!-- Mitarbeiter Tab -->
+                <div id="pkContent-mitarbeiter">
+                    <div id="pkLoading-mitarbeiter" style="text-align: center; padding: 32px; color: var(--text-gray);">Laden...</div>
+                    <div id="pkTable-mitarbeiter"></div>
+                </div>
+
+                <!-- Abwesenheiten Tab -->
+                <div id="pkContent-abwesenheiten" style="display: none;">
+                    <div id="pkLoading-abwesenheiten" style="text-align: center; padding: 32px; color: var(--text-gray);">Laden...</div>
+                    <div id="pkTable-abwesenheiten"></div>
+                </div>
+
+                <!-- System-User Tab -->
+                <div id="pkContent-systemuser" style="display: none;">
+                    <div id="pkLoading-systemuser" style="text-align: center; padding: 32px; color: var(--text-gray);">Laden...</div>
+                    <div id="pkTable-systemuser"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Version Check -->
     <div id="versionInfo" style="position: fixed; bottom: 8px; right: 8px; font-size: 10px; color: #999; background: white; padding: 4px 8px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); z-index: 9999;">
-        v2026-02-20_06:00 (Soft-Delete + Audit + Schema-Härtung)
+        v2026-02-20_14:00 (Audit-Trail vollständig + Papierkorb-UI)
     </div>
 </body>
 </html>

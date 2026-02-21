@@ -2143,12 +2143,72 @@ TECHNOLOGIE-STACK:
 
             <div id="auftraegeView" class="content-view">
                 <div class="page-header">
-                    <h1 class="page-title">Aufträge</h1>
+                    <div>
+                        <h1 class="page-title">Aufträge</h1>
+                        <p class="page-subtitle" id="auftraegeSubtitle">Einsatzplanung</p>
+                    </div>
+                    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                        <button class="btn btn-primary" id="btnNeuerAuftrag" onclick="openAuftragDialog()" style="display:none;">+ Auftrag erfassen</button>
+                    </div>
                 </div>
-                <div class="coming-soon">
-                    <div style="font-size: 64px; margin-bottom: 16px;">📋</div>
-                    <h3>Wird gebaut...</h3>
+
+                <!-- Filter Bar -->
+                <div class="data-card" style="margin-bottom: 16px;">
+                    <div style="padding: 16px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+                        <input type="text" id="searchAuftraege" placeholder="🔍 Suche..." oninput="filterAuftraege()" style="padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; min-width: 200px; flex: 1;">
+                        <select id="filterAuftragStatus" onchange="filterAuftraege()" style="padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px;">
+                            <option value="">Alle Status</option>
+                            <option value="KB">KB – Kommt Bescheid</option>
+                            <option value="AN">AN – Anrufen</option>
+                            <option value="RES">RES – Reserviert</option>
+                            <option value="PROV">PROV – Provisorisch</option>
+                            <option value="FIX">FIX – Fix verplant</option>
+                        </select>
+                        <select id="filterAuftragFiliale" onchange="filterAuftraege()" style="padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px;">
+                            <option value="">Alle Filialen</option>
+                            <option value="ZH">Zürich</option>
+                            <option value="AG">Aargau</option>
+                            <option value="GL">Glarus</option>
+                            <option value="GR">Graubünden</option>
+                            <option value="SG">St. Gallen</option>
+                            <option value="ZS">Zentralschweiz</option>
+                        </select>
+                        <!-- Multi-Select Dropdown Ausführungsart -->
+                        <div id="ausfuehrungDropdownWrapper" style="position:relative;">
+                            <button type="button" id="ausfuehrungDropdownBtn" onclick="toggleAusfuehrungDropdown(event)" style="padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; background:white; cursor:pointer; display:flex; align-items:center; gap:6px; min-width:180px; justify-content:space-between;">
+                                <span id="ausfuehrungDropdownLabel">Alle Ausführungsarten</span>
+                                <span>▾</span>
+                            </button>
+                            <div id="ausfuehrungDropdownMenu" style="display:none; position:absolute; top:100%; left:0; z-index:1000; background:white; border:1px solid var(--border); border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,0.12); min-width:200px; max-height:300px; overflow-y:auto; margin-top:4px; padding:8px 0;">
+                                <label style="display:flex; align-items:center; gap:8px; padding:6px 12px; cursor:pointer; font-size:14px; border-bottom:1px solid var(--border); margin-bottom:4px;">
+                                    <input type="checkbox" id="filterAusfuehrungAll" onchange="toggleAllAusfuehrung(this)"> <strong>Alle</strong>
+                                </label>
+                                <label style="display:flex; align-items:center; gap:8px; padding:6px 12px; cursor:pointer; font-size:14px;"><input type="checkbox" class="filter-ausfuehrung-cb" value="M66" onchange="filterAuftraege()"> M66</label>
+                                <label style="display:flex; align-items:center; gap:8px; padding:6px 12px; cursor:pointer; font-size:14px;"><input type="checkbox" class="filter-ausfuehrung-cb" value="HM" onchange="filterAuftraege()"> HM</label>
+                                <label style="display:flex; align-items:center; gap:8px; padding:6px 12px; cursor:pointer; font-size:14px;"><input type="checkbox" class="filter-ausfuehrung-cb" value="KSP" onchange="filterAuftraege()"> KSP</label>
+                                <label style="display:flex; align-items:center; gap:8px; padding:6px 12px; cursor:pointer; font-size:14px;"><input type="checkbox" class="filter-ausfuehrung-cb" value="KP-S" onchange="filterAuftraege()"> KP-S</label>
+                                <label style="display:flex; align-items:center; gap:8px; padding:6px 12px; cursor:pointer; font-size:14px;"><input type="checkbox" class="filter-ausfuehrung-cb" value="KP-T" onchange="filterAuftraege()"> KP-T</label>
+                                <label style="display:flex; align-items:center; gap:8px; padding:6px 12px; cursor:pointer; font-size:14px;"><input type="checkbox" class="filter-ausfuehrung-cb" value="KP-A" onchange="filterAuftraege()"> KP-A</label>
+                                <label style="display:flex; align-items:center; gap:8px; padding:6px 12px; cursor:pointer; font-size:14px;"><input type="checkbox" class="filter-ausfuehrung-cb" value="Grinding" onchange="filterAuftraege()"> Grinding</label>
+                                <label style="display:flex; align-items:center; gap:8px; padding:6px 12px; cursor:pointer; font-size:14px;"><input type="checkbox" class="filter-ausfuehrung-cb" value="Demark." onchange="filterAuftraege()"> Demark.</label>
+                                <label style="display:flex; align-items:center; gap:8px; padding:6px 12px; cursor:pointer; font-size:14px;"><input type="checkbox" class="filter-ausfuehrung-cb" value="SRT65" onchange="filterAuftraege()"> SRT65</label>
+                                <label style="display:flex; align-items:center; gap:8px; padding:6px 12px; cursor:pointer; font-size:14px;"><input type="checkbox" class="filter-ausfuehrung-cb" value="SRT45" onchange="filterAuftraege()"> SRT45</label>
+                                <label style="display:flex; align-items:center; gap:8px; padding:6px 12px; cursor:pointer; font-size:14px;"><input type="checkbox" class="filter-ausfuehrung-cb" value="Folien" onchange="filterAuftraege()"> Folien</label>
+                                <label style="display:flex; align-items:center; gap:8px; padding:6px 12px; cursor:pointer; font-size:14px;"><input type="checkbox" class="filter-ausfuehrung-cb" value="Frankenstein" onchange="filterAuftraege()"> Frankenstein</label>
+                                <label style="display:flex; align-items:center; gap:8px; padding:6px 12px; cursor:pointer; font-size:14px;"><input type="checkbox" class="filter-ausfuehrung-cb" value="Madonna" onchange="filterAuftraege()"> Madonna</label>
+                                <label style="display:flex; align-items:center; gap:8px; padding:6px 12px; cursor:pointer; font-size:14px;"><input type="checkbox" class="filter-ausfuehrung-cb" value="M21" onchange="filterAuftraege()"> M21</label>
+                                <label style="display:flex; align-items:center; gap:8px; padding:6px 12px; cursor:pointer; font-size:14px;"><input type="checkbox" class="filter-ausfuehrung-cb" value="Lola" onchange="filterAuftraege()"> Lola</label>
+                                <label style="display:flex; align-items:center; gap:8px; padding:6px 12px; cursor:pointer; font-size:14px;"><input type="checkbox" class="filter-ausfuehrung-cb" value="Hüssy One" onchange="filterAuftraege()"> Hüssy One</label>
+                            </div>
+                        </div>
+                        <select id="filterAuftragEc" onchange="filterAuftraege()" style="padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px;">
+                            <option value="">Alle ECs</option>
+                        </select>
+                    </div>
                 </div>
+
+                <!-- Aufträge Liste -->
+                <div id="auftraegeTableContainer"></div>
             </div>
 
             <div id="tagesprogrammView" class="content-view">
@@ -2197,7 +2257,12 @@ TECHNOLOGIE-STACK:
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
+        // PDF.js worker
+        if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
         // ============================================
         // SUPABASE CONFIGURATION
         // ============================================
@@ -2599,6 +2664,9 @@ TECHNOLOGIE-STACK:
             }
             if (viewName === 'kalender') {
                 loadKalender();
+            }
+            if (viewName === 'auftraege') {
+                loadAuftraege();
             }
 
             console.log('📄 Switched to:', viewName);
@@ -4266,6 +4334,542 @@ TECHNOLOGIE-STACK:
         // ADMIN PANEL
         // ============================================
         let allRoles = [];
+
+        // ============================================
+        // AUFTRÄGE
+        // ============================================
+        let allAuftraege = [];
+        let editingAuftragId = null;
+
+        const AUSFUEHRUNGSARTEN = ['M66','HM','KSP','KP-S','KP-T','KP-A','Grinding','Demark.','SRT65','SRT45','Folien','Frankenstein','Madonna','M21','Lola','Hüssy One'];
+
+        const STATUS_CONFIG = {
+            'KB': { label: 'KB', color: '#6b7280', bg: '#f3f4f6' },
+            'AN': { label: 'AN', color: '#d97706', bg: '#fef3c7' },
+            'RES': { label: 'RES', color: '#7c3aed', bg: '#ede9fe' },
+            'PROV': { label: 'PROV', color: '#2563eb', bg: '#dbeafe' },
+            'FIX': { label: 'FIX', color: '#059669', bg: '#d1fae5' }
+        };
+
+        const FILIALE_MAP = {
+            '121': 'ZH', '191': 'ZH',
+            '131': 'AG', '141': 'GL',
+            '151': 'GR', '171': 'SG', '181': 'ZS'
+        };
+
+        function getFilialeFromProjektnummer(nr) {
+            if (!nr || nr.length < 3) return null;
+            const prefix = nr.substring(0, 3);
+            return FILIALE_MAP[prefix] || null;
+        }
+
+        async function loadAuftraege() {
+            try {
+                const [auftragRes, ausschlussRes, ecRes] = await Promise.all([
+                    supabaseClient.from('auftraege')
+                        .select('*, verantwortlicher:verantwortlicher_id(name), erfasser:erfasst_von(name)')
+                        .order('einsatzdatum', { ascending: true }),
+                    supabaseClient.from('auftrag_ec_ausschluss')
+                        .select('auftrag_id, mitarbeiter_id'),
+                    supabaseClient.from('v_mitarbeiter_aktiv')
+                        .select('id, vorname, nachname')
+                        .eq('funktion', 'EC')
+                        .eq('aktiv', true)
+                        .order('nachname')
+                ]);
+
+                if (auftragRes.error) throw auftragRes.error;
+
+                // Ausschlüsse an Aufträge anhängen
+                const ausschlussMap = {};
+                (ausschlussRes.data || []).forEach(a => {
+                    if (!ausschlussMap[a.auftrag_id]) ausschlussMap[a.auftrag_id] = [];
+                    ausschlussMap[a.auftrag_id].push(a.mitarbeiter_id);
+                });
+                allAuftraege = (auftragRes.data || []).map(a => ({
+                    ...a,
+                    ec_ausschluss_ids: ausschlussMap[a.id] || []
+                }));
+
+                // EC Filter Dropdown befüllen
+                const allEcs = ecRes.data || [];
+                const ecSel = document.getElementById('filterAuftragEc');
+                ecSel.innerHTML = '<option value="">Alle ECs</option>' +
+                    allEcs.map(e => `<option value="${e.id}">${e.vorname} ${e.nachname}</option>`).join('');
+
+                renderAuftraege(allAuftraege);
+
+                const offen = allAuftraege.filter(a => a.status !== 'FIX').length;
+                document.getElementById('auftraegeSubtitle').textContent = `${allAuftraege.length} Aufträge, ${offen} offen`;
+
+                if (canEditAuftraege()) {
+                    document.getElementById('btnNeuerAuftrag').style.display = 'block';
+                }
+            } catch (err) {
+                document.getElementById('auftraegeTableContainer').innerHTML =
+                    `<p style="color:red; padding:16px;">Fehler: ${err.message}</p>`;
+            }
+        }
+
+        function renderAuftraege(list) {
+            const container = document.getElementById('auftraegeTableContainer');
+            if (!list || list.length === 0) {
+                container.innerHTML = '<div class="data-card" style="padding:48px; text-align:center; color:var(--text-gray);">Keine Aufträge gefunden</div>';
+                return;
+            }
+
+            const rows = list.map(a => {
+                const isFix = a.status === 'FIX';
+                const s = STATUS_CONFIG[a.status] || STATUS_CONFIG['KB'];
+                const arten = Array.isArray(a.ausfuehrungsart) ? a.ausfuehrungsart.join(', ') : (a.ausfuehrungsart || '–');
+                const datum = a.einsatzdatum ? new Date(a.einsatzdatum).toLocaleDateString('de-CH') : '–';
+                const zeit = a.einsatzzeit ? a.einsatzzeit.substring(0,5) : '';
+                return `<tr style="${isFix ? 'opacity:0.45;' : ''}">
+                    <td style="font-weight:700; font-family:monospace;">${a.id}</td>
+                    <td>
+                        <div style="font-weight:600;">${datum}${zeit ? ' ' + zeit : ''}</div>
+                        <div style="font-size:12px; color:var(--text-gray);">${a.filiale || '–'}</div>
+                    </td>
+                    <td>
+                        <div>${a.einsatzort || '–'}</div>
+                        <div style="font-size:12px; color:var(--text-gray);">${a.projektnummer}</div>
+                    </td>
+                    <td style="font-size:13px;">${arten}</td>
+                    <td style="font-size:13px;">${a.aufwand_stunden ? a.aufwand_stunden + 'h' : '–'}</td>
+                    <td><span style="display:inline-block; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:700; color:${s.color}; background:${s.bg};">${s.label}</span></td>
+                    <td style="font-size:13px;">${a.verantwortlicher?.name || '–'}</td>
+                    <td>
+                        ${canEditAuftraege() ? `<button class="btn btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="openAuftragDialog(${a.id})">✏️</button>` : ''}
+                        ${(currentUser?.role === 'admin' || currentUser?.role === 'geschaeftsleitung') ? `<button class="btn btn-secondary" style="padding:4px 10px; font-size:12px; margin-left:4px; color:var(--danger);" onclick="deleteAuftrag(${a.id})">🗑️</button>` : ''}
+                    </td>
+                </tr>`;
+            }).join('');
+
+            container.innerHTML = `<div class="data-card">
+                <table class="data-table" style="width:100%">
+                    <thead><tr>
+                        <th>ID</th>
+                        <th>Datum</th>
+                        <th>Ort / Projekt</th>
+                        <th>Ausführung</th>
+                        <th>Aufwand</th>
+                        <th>Status</th>
+                        <th>Verantwortlich</th>
+                        <th></th>
+                    </tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>`;
+        }
+
+        function toggleAusfuehrungsartDropdown(event) {
+            event.stopPropagation();
+            const menu = document.getElementById('ausfuehrungsartContainer');
+            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function toggleAllAusfuehrungsart(cb) {
+            document.querySelectorAll('.ausfuehrung-cb').forEach(c => c.checked = cb.checked);
+            updateAusfuehrungsartLabel();
+        }
+
+        function updateAusfuehrungsartLabel() {
+            const checked = Array.from(document.querySelectorAll('.ausfuehrung-cb:checked')).map(c => c.value);
+            const label = document.getElementById('ausfuehrungsartLabel');
+            if (!label) return;
+            if (checked.length === 0) label.textContent = 'Bitte wählen...';
+            else label.textContent = checked.join(', ');
+        }
+
+        // Dropdown schliessen wenn ausserhalb geklickt (Formular)
+        document.addEventListener('click', (e) => {
+            const wrapper = document.getElementById('ausfuehrungsartDropdownWrapper');
+            if (wrapper && !wrapper.contains(e.target)) {
+                const menu = document.getElementById('ausfuehrungsartContainer');
+                if (menu) menu.style.display = 'none';
+            }
+        });
+
+        function toggleAusfuehrungDropdown(event) {
+            event.stopPropagation();
+            const menu = document.getElementById('ausfuehrungDropdownMenu');
+            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function toggleAllAusfuehrung(cb) {
+            document.querySelectorAll('.filter-ausfuehrung-cb').forEach(c => c.checked = cb.checked);
+            filterAuftraege();
+        }
+
+        function updateAusfuehrungLabel() {
+            const checked = Array.from(document.querySelectorAll('.filter-ausfuehrung-cb:checked')).map(c => c.value);
+            const label = document.getElementById('ausfuehrungDropdownLabel');
+            if (!label) return;
+            if (checked.length === 0) label.textContent = 'Alle Ausführungsarten';
+            else label.textContent = checked.join(', ');
+        }
+
+        // Dropdown schliessen wenn ausserhalb geklickt
+        document.addEventListener('click', (e) => {
+            const wrapper = document.getElementById('ausfuehrungDropdownWrapper');
+            if (wrapper && !wrapper.contains(e.target)) {
+                document.getElementById('ausfuehrungDropdownMenu').style.display = 'none';
+            }
+        });
+
+        function filterAuftraege() {
+            const search = document.getElementById('searchAuftraege').value.toLowerCase();
+            const status = document.getElementById('filterAuftragStatus').value;
+            const filiale = document.getElementById('filterAuftragFiliale').value;
+            const ausfuehrungSelected = Array.from(document.querySelectorAll('.filter-ausfuehrung-cb:checked')).map(c => c.value);
+            updateAusfuehrungLabel();
+            const ecId = document.getElementById('filterAuftragEc').value;
+
+            const filtered = allAuftraege.filter(a => {
+                if (status && a.status !== status) return false;
+                if (filiale && a.filiale !== filiale) return false;
+                if (ausfuehrungSelected.length > 0 && (!Array.isArray(a.ausfuehrungsart) || !ausfuehrungSelected.some(sel => a.ausfuehrungsart.includes(sel)))) return false;
+                // EC Filter: zeige nur Aufträge wo dieser EC NICHT ausgeschlossen ist
+                if (ecId && (a.ec_ausschluss_ids || []).map(String).includes(ecId)) return false;
+                if (search) {
+                    const haystack = [a.id, a.projektnummer, a.einsatzort, a.einsatzbeschreibung,
+                        a.ansprechperson_name, a.filiale].join(' ').toLowerCase();
+                    if (!haystack.includes(search)) return false;
+                }
+                return true;
+            });
+            renderAuftraege(filtered);
+        }
+
+        function updateAuftragFiliale() {
+            const nr = document.getElementById('auftragProjektnummer').value;
+            const filiale = getFilialeFromProjektnummer(nr);
+            document.getElementById('auftragFiliale').value = filiale || '–';
+        }
+
+        async function openAuftragDialog(id = null) {
+            editingAuftragId = id;
+            document.getElementById('auftragDialogTitle').textContent = id ? 'Auftrag bearbeiten' : 'Auftrag erfassen';
+            document.getElementById('pdfExtractStatus').textContent = '';
+            document.getElementById('auftragPdfInput').value = '';
+
+            // Render Ausführungsart Checkboxen
+            document.getElementById('ausfuehrungsartContainer').innerHTML =
+                `<div style="padding:6px 12px; border-bottom:1px solid #e5e7eb;">
+                    <label style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-size:14px;">
+                        <input type="checkbox" id="ausfuehrungsartAll" onchange="toggleAllAusfuehrungsart(this)"> <strong>Alle</strong>
+                    </label>
+                </div>` +
+                AUSFUEHRUNGSARTEN.map(a =>
+                `<div style="padding:5px 12px;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">
+                    <label style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-size:14px; width:100%;">
+                        <input type="checkbox" value="${a}" class="ausfuehrung-cb" onchange="updateAusfuehrungsartLabel()"> <span>${a}</span>
+                    </label>
+                </div>`
+            ).join('');
+
+            // Render EC-Ausschluss Checkboxen – direkt aus DB laden
+            const ecContainer = document.getElementById('ecAusschlussContainer');
+            ecContainer.innerHTML = '<span style="color:var(--text-gray); font-size:13px;">Laden...</span>';
+            const { data: ecData } = await supabaseClient
+                .from('v_mitarbeiter_aktiv')
+                .select('id, vorname, nachname')
+                .eq('funktion', 'EC')
+                .eq('aktiv', true)
+                .order('nachname');
+            const ecs = ecData || [];
+            ecContainer.innerHTML = ecs.length === 0
+                ? '<span style="color:var(--text-gray); font-size:13px;">Keine ECs verfügbar</span>'
+                : ecs.map(m =>
+                    `<label style="display:flex; align-items:center; gap:4px; font-size:13px; cursor:pointer; padding:4px 8px; border:1px solid var(--border); border-radius:6px; user-select:none;">
+                        <input type="checkbox" value="${m.id}" class="ec-ausschluss-cb"> ${m.vorname} ${m.nachname}
+                    </label>`
+                ).join('');
+
+            // Verantwortlicher Dropdown befüllen
+            const { data: users } = await supabaseClient.from('v_system_users_aktiv').select('id, name, role');
+            const sel = document.getElementById('auftragVerantwortlicher');
+            sel.innerHTML = '<option value="">Bitte wählen...</option>' +
+                (users || []).map(u => `<option value="${u.id}">${u.name} (${u.role})</option>`).join('');
+
+            if (id) {
+                // Bestehenden Auftrag laden
+                const a = allAuftraege.find(x => x.id === id);
+                if (a) {
+                    document.getElementById('auftragId').value = a.id;
+                    document.getElementById('auftragId').readOnly = true;
+                    document.getElementById('auftragProjektnummer').value = a.projektnummer || '';
+                    document.getElementById('auftragFiliale').value = a.filiale || '';
+                    document.getElementById('auftragDatum').value = a.einsatzdatum || '';
+                    document.getElementById('auftragZeit').value = a.einsatzzeit ? a.einsatzzeit.substring(0,5) : '';
+                    document.getElementById('auftragOrt').value = a.einsatzort || '';
+                    document.getElementById('auftragUntergrund').value = a.untergrund || '';
+                    document.getElementById('auftragAnzahlEc').value = a.anzahl_ec || 1;
+                    document.getElementById('auftragAnzahlMa').value = a.anzahl_ma || 1;
+                    document.getElementById('auftragAufwand').value = a.aufwand_stunden || '';
+                    document.getElementById('auftragStatus').value = a.status || 'KB';
+                    document.getElementById('auftragBeschreibung').value = a.einsatzbeschreibung || '';
+                    document.getElementById('auftragKommentarFl').value = a.kommentar_fl || '';
+                    document.getElementById('auftragKommentarEc').value = a.kommentar_ec || '';
+                    document.getElementById('auftragKundeName').value = a.ansprechperson_name || '';
+                    document.getElementById('auftragKundeTel').value = a.ansprechperson_tel || '';
+                    document.getElementById('auftragKundeMail').value = a.ansprechperson_mail || '';
+                    if (a.verantwortlicher_id) sel.value = a.verantwortlicher_id;
+
+                    // Ausführungsart Checkboxen setzen
+                    if (Array.isArray(a.ausfuehrungsart)) {
+                        document.querySelectorAll('.ausfuehrung-cb').forEach(cb => {
+                            cb.checked = a.ausfuehrungsart.includes(cb.value);
+                        });
+                    }
+
+                    // EC-Ausschluss laden
+                    const { data: ausschluss } = await supabaseClient
+                        .from('auftrag_ec_ausschluss')
+                        .select('mitarbeiter_id')
+                        .eq('auftrag_id', id);
+                    const ausschlussIds = (ausschluss || []).map(x => x.mitarbeiter_id.toString());
+                    document.querySelectorAll('.ec-ausschluss-cb').forEach(cb => {
+                        cb.checked = ausschlussIds.includes(cb.value);
+                    });
+                }
+            } else {
+                // Neuer Auftrag – Felder leeren
+                document.getElementById('auftragId').value = '';
+                document.getElementById('auftragId').readOnly = false;
+                document.getElementById('auftragProjektnummer').value = '';
+                document.getElementById('auftragFiliale').value = '';
+                document.getElementById('auftragDatum').value = '';
+                document.getElementById('auftragZeit').value = '';
+                document.getElementById('auftragOrt').value = '';
+                document.getElementById('auftragUntergrund').value = '';
+                document.getElementById('auftragAnzahlEc').value = 1;
+                document.getElementById('auftragAnzahlMa').value = 1;
+                document.getElementById('auftragAufwand').value = '';
+                document.getElementById('auftragStatus').value = 'KB';
+                document.getElementById('auftragBeschreibung').value = '';
+                document.getElementById('auftragKommentarFl').value = '';
+                document.getElementById('auftragKommentarEc').value = '';
+                document.getElementById('auftragKundeName').value = '';
+                document.getElementById('auftragKundeTel').value = '';
+                document.getElementById('auftragKundeMail').value = '';
+            }
+
+            document.getElementById('auftragDialog').style.display = 'flex';
+        }
+
+        function closeAuftragDialog() {
+            document.getElementById('auftragDialog').style.display = 'none';
+            editingAuftragId = null;
+        }
+
+        async function extractAuftragFromPdf(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const statusEl = document.getElementById('pdfExtractStatus');
+            statusEl.textContent = '⏳ PDF wird verarbeitet...';
+            statusEl.style.color = 'var(--text-gray)';
+
+            try {
+                const text = await readPdfText(file);
+                parsePdfIntoAuftragForm(text);
+                // Debug: zeige extrahierten Text in Konsole
+                console.log('PDF TEXT EXTRAKT:', text);
+                statusEl.textContent = '✅ Felder wurden aus PDF befüllt – bitte prüfen und ergänzen.';
+                statusEl.style.color = 'var(--success)';
+            } catch (err) {
+                statusEl.textContent = '❌ PDF konnte nicht gelesen werden: ' + err.message;
+                statusEl.style.color = 'var(--danger)';
+            }
+        }
+
+        async function readPdfText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    try {
+                        const typedArray = new Uint8Array(e.target.result);
+                        const pdf = await pdfjsLib.getDocument({ data: typedArray }).promise;
+                        let fullText = '';
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            const textContent = await page.getTextContent();
+                            fullText += textContent.items.map(item => item.str).join(' ') + '\n';
+                        }
+                        resolve(fullText);
+                    } catch (err) {
+                        reject(err);
+                    }
+                };
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function parsePdfIntoAuftragForm(rawText) {
+            // Text normalisieren: mehrfache Leerzeichen und Zeilenumbrüche glätten
+            const text = rawText.replace(/[ \t]+/g, ' ').replace(/\n+/g, ' ').trim();
+            console.log('PDF TEXT NORMALISIERT:', text);
+            // Einsatz-ID: "ID: 36167"
+            const idMatch = text.match(/ID:\s*(\d{4,6})/);
+            if (idMatch) document.getElementById('auftragId').value = idMatch[1];
+
+            // Projektnummer: "12126746"
+            const projMatch = text.match(/Projektnummer:\s*(\d{7,9})/);
+            if (projMatch) {
+                document.getElementById('auftragProjektnummer').value = projMatch[1];
+                updateAuftragFiliale();
+            }
+
+            // Datum: "FT: 16/3/2026" oder "Termin: 16.03.2026"
+            const datumMatch = text.match(/(?:FT:|Termin:)\s*(\d{1,2})[\/\.](\d{1,2})[\/\.](\d{4})/);
+            if (datumMatch) {
+                const d = datumMatch[1].padStart(2,'0');
+                const m = datumMatch[2].padStart(2,'0');
+                const y = datumMatch[3];
+                document.getElementById('auftragDatum').value = `${y}-${m}-${d}`;
+            }
+
+            // Uhrzeit: "08:00"
+            const zeitMatch = text.match(/(\d{2}:\d{2})(?:\s|$)/);
+            if (zeitMatch) document.getElementById('auftragZeit').value = zeitMatch[1];
+
+            // Adresse
+            const addrMatch = text.match(/Adresse:\s*([^,\n]+,\s*\d{4}\s*\w+)/);
+            if (addrMatch) document.getElementById('auftragOrt').value = addrMatch[1].trim();
+
+            // Untergrund
+            const untergrundMatch = text.match(/Untergrund:\s*(\w+)/);
+            if (untergrundMatch) document.getElementById('auftragUntergrund').value = untergrundMatch[1];
+
+            // Anzahl EC/MA: "#EC: 1 | #MA: 1"
+            const ecMatch = text.match(/#EC:\s*(\d+)/);
+            const maMatch = text.match(/#MA:\s*(\d+)/);
+            if (ecMatch) document.getElementById('auftragAnzahlEc').value = ecMatch[1];
+            if (maMatch) document.getElementById('auftragAnzahlMa').value = maMatch[1];
+
+            // Aufwand: "24h"
+            const aufwandMatch = text.match(/Einsatzinfo:\s*(\d+)h/);
+            if (aufwandMatch) document.getElementById('auftragAufwand').value = aufwandMatch[1];
+
+            // Einsatzbeschreibung
+            const beschrMatch = text.match(/Einsatzbeschreibung:\s*(.+?)(?:Kommentar|$)/s);
+            if (beschrMatch) document.getElementById('auftragBeschreibung').value = beschrMatch[1].trim().substring(0, 500);
+
+            // Kommentar FL
+            const flMatch = text.match(/Kommentar FL:\s*(.+?)(?:Projektname|Arbeitstyp|#EC|$)/s);
+            if (flMatch && flMatch[1].trim()) document.getElementById('auftragKommentarFl').value = flMatch[1].trim().substring(0, 300);
+
+            // Kommentar EC
+            const ecKomMatch = text.match(/Kommentar an EC:\s*(.+?)(?:M66|E:|$)/s);
+            if (ecKomMatch) document.getElementById('auftragKommentarEc').value = ecKomMatch[1].trim().substring(0, 300);
+
+            // Ansprechperson: "Herr René Alder, 079 419 53 13, r.alder@jaco.ch"
+            // Ansprechperson: verschiedene Formate abdecken
+            const kontaktMatch = text.match(/Kunde vorher anrufen:\s*(.+?),\s*([\d\s]{8,15}),\s*([\w.@+\-]+\.[a-z]{2,})/i);
+            if (kontaktMatch) {
+                document.getElementById('auftragKundeName').value = kontaktMatch[1].trim();
+                document.getElementById('auftragKundeTel').value = kontaktMatch[2].trim();
+                document.getElementById('auftragKundeMail').value = kontaktMatch[3].trim();
+            } else {
+                // Fallback: Name + Tel ohne Mail
+                const kontaktName = text.match(/Kunde vorher anrufen:\s*(.+?),\s*([\d\s]{8,15})/);
+                if (kontaktName) {
+                    document.getElementById('auftragKundeName').value = kontaktName[1].trim();
+                    document.getElementById('auftragKundeTel').value = kontaktName[2].trim();
+                }
+                // Mail separat suchen
+                const mailMatch = text.match(/([\w.+\-]+@[\w.\-]+\.[a-z]{2,})/i);
+                if (mailMatch) document.getElementById('auftragKundeMail').value = mailMatch[1].trim();
+            }
+        }
+
+        async function saveAuftrag() {
+            const id = parseInt(document.getElementById('auftragId').value);
+            const projektnummer = document.getElementById('auftragProjektnummer').value.trim();
+            const datum = document.getElementById('auftragDatum').value;
+
+            if (!id || !projektnummer || !datum) {
+                alert('⚠️ Einsatz-ID, Projektnummer und Datum sind Pflichtfelder.');
+                return;
+            }
+
+            const ausfuehrungsart = Array.from(document.querySelectorAll('.ausfuehrung-cb:checked')).map(cb => cb.value);
+            const ecAusschluss = Array.from(document.querySelectorAll('.ec-ausschluss-cb:checked')).map(cb => parseInt(cb.value));
+            const verantwortlicher = document.getElementById('auftragVerantwortlicher').value;
+
+            const params = {
+                p_session_token: sessionToken,
+                p_id: id,
+                p_projektnummer: projektnummer,
+                p_einsatzdatum: datum,
+                p_einsatzzeit: document.getElementById('auftragZeit').value || null,
+                p_einsatzort: document.getElementById('auftragOrt').value || null,
+                p_untergrund: document.getElementById('auftragUntergrund').value || null,
+                p_anzahl_ec: parseInt(document.getElementById('auftragAnzahlEc').value) || 1,
+                p_anzahl_ma: parseInt(document.getElementById('auftragAnzahlMa').value) || 0,
+                p_aufwand_stunden: parseFloat(document.getElementById('auftragAufwand').value) || null,
+                p_ausfuehrungsart: ausfuehrungsart.length > 0 ? ausfuehrungsart : null,
+                p_einsatzbeschreibung: document.getElementById('auftragBeschreibung').value || null,
+                p_kommentar_fl: document.getElementById('auftragKommentarFl').value || null,
+                p_kommentar_ec: document.getElementById('auftragKommentarEc').value || null,
+                p_ansprechperson_name: document.getElementById('auftragKundeName').value || null,
+                p_ansprechperson_tel: document.getElementById('auftragKundeTel').value || null,
+                p_ansprechperson_mail: document.getElementById('auftragKundeMail').value || null,
+                p_status: document.getElementById('auftragStatus').value,
+                p_verantwortlicher_id: verantwortlicher ? parseInt(verantwortlicher) : null,
+                p_ec_ausschluss: ecAusschluss.length > 0 ? ecAusschluss : null
+            };
+
+            try {
+                let result, error;
+                if (editingAuftragId) {
+                    ({ data: result, error } = await supabaseClient.rpc('update_auftrag', {
+                        p_session_token: sessionToken,
+                        p_id: editingAuftragId,
+                        p_status: params.p_status,
+                        p_verantwortlicher_id: params.p_verantwortlicher_id,
+                        p_einsatzdatum: params.p_einsatzdatum,
+                        p_einsatzzeit: params.p_einsatzzeit,
+                        p_einsatzort: params.p_einsatzort,
+                        p_untergrund: params.p_untergrund,
+                        p_anzahl_ec: params.p_anzahl_ec,
+                        p_anzahl_ma: params.p_anzahl_ma,
+                        p_aufwand_stunden: params.p_aufwand_stunden,
+                        p_ausfuehrungsart: params.p_ausfuehrungsart,
+                        p_einsatzbeschreibung: params.p_einsatzbeschreibung,
+                        p_kommentar_fl: params.p_kommentar_fl,
+                        p_kommentar_ec: params.p_kommentar_ec,
+                        p_ansprechperson_name: params.p_ansprechperson_name,
+                        p_ansprechperson_tel: params.p_ansprechperson_tel,
+                        p_ansprechperson_mail: params.p_ansprechperson_mail,
+                        p_ec_ausschluss: params.p_ec_ausschluss
+                    }));
+                } else {
+                    ({ data: result, error } = await supabaseClient.rpc('create_auftrag', params));
+                }
+
+                if (error || result?.error) throw new Error(result?.error || error?.message);
+                closeAuftragDialog();
+                await loadAuftraege();
+            } catch (err) {
+                alert('❌ Fehler: ' + err.message);
+            }
+        }
+
+        async function deleteAuftrag(id) {
+            if (!confirm(`Auftrag ${id} wirklich löschen?`)) return;
+            try {
+                const { data, error } = await supabaseClient.rpc('delete_auftrag', {
+                    p_session_token: sessionToken,
+                    p_id: id
+                });
+                if (error || data?.error) throw new Error(data?.error || error?.message);
+                await loadAuftraege();
+            } catch (err) {
+                alert('❌ Fehler: ' + err.message);
+            }
+        }
 
         // ============================================
         // PAPIERKORB
@@ -6616,6 +7220,145 @@ TECHNOLOGIE-STACK:
     }
     </script>
     
+    <!-- Auftrag Dialog -->
+    <div id="auftragDialog" class="modal" style="display:none;">
+        <div class="modal-overlay" onclick="closeAuftragDialog()"></div>
+        <div class="modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h2 id="auftragDialogTitle">Auftrag erfassen</h2>
+                <button class="modal-close" onclick="closeAuftragDialog()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div style="background:#fef3c7; border:1px solid #f59e0b; border-radius:8px; padding:12px 16px; margin-bottom:20px; font-size:13px; color:#92400e;">
+                    📄 PDF hochladen um Felder automatisch zu befüllen – danach manuell ergänzen.
+                </div>
+
+                <!-- PDF Upload -->
+                <div style="margin-bottom:20px;">
+                    <label style="display:block; font-weight:600; margin-bottom:8px; font-size:14px;">PDF hochladen</label>
+                    <input type="file" id="auftragPdfInput" accept=".pdf" onchange="extractAuftragFromPdf(event)" style="padding:8px; border:1px solid var(--border); border-radius:8px; width:100%; font-size:14px;">
+                    <div id="pdfExtractStatus" style="margin-top:8px; font-size:13px; color:var(--text-gray);"></div>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                    <div class="form-group">
+                        <label>Einsatz-ID *</label>
+                        <input type="number" id="auftragId" placeholder="z.B. 36167" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Projektnummer *</label>
+                        <input type="text" id="auftragProjektnummer" placeholder="z.B. 12126746" oninput="updateAuftragFiliale()" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Einsatzdatum *</label>
+                        <input type="date" id="auftragDatum" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Uhrzeit</label>
+                        <input type="time" id="auftragZeit">
+                    </div>
+                    <div class="form-group" style="grid-column:1/-1;">
+                        <label>Einsatzort</label>
+                        <input type="text" id="auftragOrt" placeholder="z.B. Kesslerplatz 6, 8952 Schlieren">
+                    </div>
+                    <div class="form-group">
+                        <label>Untergrund</label>
+                        <input type="text" id="auftragUntergrund" placeholder="z.B. Beton, Asphalt">
+                    </div>
+                    <div class="form-group">
+                        <label>Filiale (auto)</label>
+                        <input type="text" id="auftragFiliale" readonly style="background:#f9fafb; color:var(--text-gray);">
+                    </div>
+                    <div class="form-group">
+                        <label>Anzahl EC</label>
+                        <input type="number" id="auftragAnzahlEc" value="1" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label>Anzahl MA</label>
+                        <input type="number" id="auftragAnzahlMa" value="1" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Aufwand (Stunden)</label>
+                        <input type="number" id="auftragAufwand" placeholder="z.B. 24" step="0.5" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="auftragStatus">
+                            <option value="KB">KB – Kommt Bescheid</option>
+                            <option value="AN">AN – Anrufen</option>
+                            <option value="RES">RES – Reserviert</option>
+                            <option value="PROV">PROV – Provisorisch</option>
+                            <option value="FIX">FIX – Fix verplant</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="grid-column:1/-1;">
+                        <label>Ausführungsart</label>
+                        <div id="ausfuehrungsartDropdownWrapper" style="position:relative;">
+                            <button type="button" id="ausfuehrungsartBtn" onclick="toggleAusfuehrungsartDropdown(event)" style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:white; cursor:pointer; display:flex; align-items:center; justify-content:space-between; text-align:left;">
+                                <span id="ausfuehrungsartLabel">Bitte wählen...</span>
+                                <span>▾</span>
+                            </button>
+                            <div id="ausfuehrungsartContainer" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:1000; background:white; border:1px solid var(--border); border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,0.12); max-height:260px; overflow-y:auto; margin-top:4px; padding:8px 0;">
+                                <!-- Checkboxes rendered by JS -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group" style="grid-column:1/-1;">
+                        <label>Einsatzbeschreibung</label>
+                        <textarea id="auftragBeschreibung" rows="3" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:8px; font-size:14px; resize:vertical;"></textarea>
+                    </div>
+                    <div class="form-group" style="grid-column:1/-1;">
+                        <label>Kommentar FL</label>
+                        <textarea id="auftragKommentarFl" rows="2" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:8px; font-size:14px; resize:vertical;"></textarea>
+                    </div>
+                    <div class="form-group" style="grid-column:1/-1;">
+                        <label>Kommentar EC</label>
+                        <textarea id="auftragKommentarEc" rows="2" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:8px; font-size:14px; resize:vertical;"></textarea>
+                    </div>
+
+                    <div style="grid-column:1/-1; padding-top:8px; border-top:1px solid var(--border);">
+                        <h4 style="margin:0 0 12px 0; color:var(--primary);">Ansprechperson Kunde</h4>
+                    </div>
+                    <div class="form-group">
+                        <label>Name</label>
+                        <input type="text" id="auftragKundeName" placeholder="z.B. Herr René Alder">
+                    </div>
+                    <div class="form-group">
+                        <label>Telefon</label>
+                        <input type="text" id="auftragKundeTel" placeholder="079 419 53 13">
+                    </div>
+                    <div class="form-group" style="grid-column:1/-1;">
+                        <label>E-Mail</label>
+                        <input type="email" id="auftragKundeMail" placeholder="name@beispiel.ch">
+                    </div>
+
+                    <div style="grid-column:1/-1; padding-top:8px; border-top:1px solid var(--border);">
+                        <h4 style="margin:0 0 12px 0; color:var(--primary);">Verantwortlicher</h4>
+                    </div>
+                    <div class="form-group" style="grid-column:1/-1;">
+                        <label>Verantwortlicher (FL, TKB, Dispo...)</label>
+                        <select id="auftragVerantwortlicher">
+                            <option value="">Bitte wählen...</option>
+                        </select>
+                    </div>
+
+                    <div style="grid-column:1/-1; padding-top:8px; border-top:1px solid var(--border);">
+                        <h4 style="margin:0 0 4px 0; color:var(--primary);">Nicht befähigte ECs</h4>
+                        <p style="font-size:13px; color:var(--text-gray); margin:0 0 12px 0;">Welche ECs können diesen Auftrag <strong>nicht</strong> ausführen?</p>
+                        <div id="ecAusschlussContainer" style="display:flex; flex-wrap:wrap; gap:8px; padding:10px; border:1px solid var(--border); border-radius:8px; min-height:42px;">
+                            <!-- EC Checkboxes rendered by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-actions" style="margin-top:24px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeAuftragDialog()">Abbrechen</button>
+                    <button type="button" class="btn btn-primary" onclick="saveAuftrag()">Speichern</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Papierkorb Modal -->
     <div id="papierkorbModal" class="modal" style="display: none;">
         <div class="modal-overlay" onclick="closePapierkorb()"></div>
@@ -6655,7 +7398,7 @@ TECHNOLOGIE-STACK:
 
     <!-- Version Check -->
     <div id="versionInfo" style="position: fixed; bottom: 8px; right: 8px; font-size: 10px; color: #999; background: white; padding: 4px 8px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); z-index: 9999;">
-        v2026-02-20_16:00 (Audit-Trail + Papierkorb-UI + FK role + Foto-NULL-Fix)
+        v2026-02-20_22:00 (Aufträge-Modul, Dropdown Layout Neuschrieb)
     </div>
 </body>
 </html>

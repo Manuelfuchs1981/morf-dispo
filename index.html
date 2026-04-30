@@ -1953,52 +1953,15 @@ TECHNOLOGIE-STACK:
                     </div>
                 </div>
 
-                <!-- Weather Widgets Grid -->
-                <div class="weather-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 16px; margin-bottom: 24px;">
-                    <!-- Oberglatt -->
-                    <div class="data-card" style="min-height: 250px;">
-                        <h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600;">
-                            🌤️ Oberglatt
-                        </h3>
-                        <div id="weatherLoadingOberglatt" style="text-align: center; padding: 20px; color: var(--text-gray); font-size: 13px;">
-                            Lade...
-                        </div>
-                        <div id="weatherWidgetOberglatt" style="display: none;"></div>
-                    </div>
-
-                    <!-- Schaffhausen -->
-                    <div class="data-card" style="min-height: 250px;">
-                        <h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600;">
-                            🌤️ Schaffhausen
-                        </h3>
-                        <div id="weatherLoadingSchaffhausen" style="text-align: center; padding: 20px; color: var(--text-gray); font-size: 13px;">
-                            Lade...
-                        </div>
-                        <div id="weatherWidgetSchaffhausen" style="display: none;"></div>
-                    </div>
-
-                    <!-- Meilen -->
-                    <div class="data-card" style="min-height: 250px;">
-                        <h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600;">
-                            🌤️ Meilen
-                        </h3>
-                        <div id="weatherLoadingMeilen" style="text-align: center; padding: 20px; color: var(--text-gray); font-size: 13px;">
-                            Lade...
-                        </div>
-                        <div id="weatherWidgetMeilen" style="display: none;"></div>
-                    </div>
-
-                    <!-- Dietikon -->
-                    <div class="data-card" style="min-height: 250px;">
-                        <h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600;">
-                            🌤️ Dietikon
-                        </h3>
-                        <div id="weatherLoadingDietikon" style="text-align: center; padding: 20px; color: var(--text-gray); font-size: 13px;">
-                            Lade...
-                        </div>
-                        <div id="weatherWidgetDietikon" style="display: none;"></div>
-                    </div>
+                <!-- Weather Header mit Einstellungen -->
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                    <h3 style="margin:0;font-size:15px;font-weight:600;color:var(--text-gray);">🌤️ Wetter</h3>
+                    <button onclick="openWetterSettings()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:var(--text-gray);">
+                        ⚙️ Standorte
+                    </button>
                 </div>
+                <!-- Weather Widgets Grid – dynamisch -->
+                <div id="weatherGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 16px; margin-bottom: 24px;"></div>
 
                 <!-- Welcome Card -->
                 <div class="welcome-card">
@@ -6658,13 +6621,104 @@ TECHNOLOGIE-STACK:
                 
                 // Load weather chart
                 // Load weather for all locations
-                loadWeatherForLocation('Oberglatt', 47.5207, 8.4919);
-                loadWeatherForLocation('Schaffhausen', 47.6976, 8.6348);
-                loadWeatherForLocation('Meilen', 47.2708, 8.6444);
-                loadWeatherForLocation('Dietikon', 47.4014, 8.4008);
+                loadAllWeatherLocations();
             } catch (error) {
                 console.error('Error loading dashboard:', error);
             }
+        }
+
+
+        // ============================================================
+        // WETTER STANDORTE – konfigurierbar
+        // ============================================================
+        const WEATHER_DEFAULT_LOCATIONS = [
+            { name: 'Oberglatt',    lat: 47.5207, lon: 8.4919 },
+            { name: 'Schaffhausen', lat: 47.6976, lon: 8.6348 },
+            { name: 'Meilen',       lat: 47.2708, lon: 8.6444 },
+            { name: 'Dietikon',     lat: 47.4014, lon: 8.4008 }
+        ];
+
+        function getWeatherLocations() {
+            try {
+                const stored = localStorage.getItem('morf_weather_locations');
+                return stored ? JSON.parse(stored) : WEATHER_DEFAULT_LOCATIONS;
+            } catch { return WEATHER_DEFAULT_LOCATIONS; }
+        }
+
+        function saveWeatherLocations(locs) {
+            localStorage.setItem('morf_weather_locations', JSON.stringify(locs));
+        }
+
+        function loadAllWeatherLocations() {
+            const locations = getWeatherLocations();
+            const grid = document.getElementById('weatherGrid');
+            if (!grid) return;
+            grid.innerHTML = locations.map(loc => `
+                <div class="data-card" style="min-height:250px;">
+                    <h3 style="margin:0 0 12px 0;font-size:16px;font-weight:600;">🌤️ ${loc.name}</h3>
+                    <div id="weatherLoading${loc.name}" style="text-align:center;padding:20px;color:var(--text-gray);font-size:13px;">Lade...</div>
+                    <div id="weatherWidget${loc.name}" style="display:none;"></div>
+                </div>`).join('');
+            locations.forEach(loc => loadWeatherForLocation(loc.name, loc.lat, loc.lon));
+        }
+
+        // Einstellungs-Modal
+        function openWetterSettings() {
+            const locs = getWeatherLocations();
+            document.getElementById('wetterSettingsBody').innerHTML = locs.map((loc, i) => `
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                    <input type="text" value="${loc.name}" id="wsName${i}"
+                        style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+                    <button onclick="wsRemove(${i})" style="padding:4px 8px;background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;cursor:pointer;font-size:13px;">🗑</button>
+                </div>`).join('') + `
+                <div style="display:flex;gap:8px;margin-top:12px;">
+                    <input type="text" id="wsNewName" placeholder="Neuer Ort (z.B. Winterthur)"
+                        style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+                    <button onclick="wsAdd()" style="padding:6px 14px;background:var(--primary);color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px;">+ Hinzufügen</button>
+                </div>`;
+            document.getElementById('wetterSettingsModal').style.display = 'flex';
+        }
+
+        function closeWetterSettings() {
+            document.getElementById('wetterSettingsModal').style.display = 'none';
+        }
+
+        function wsRemove(idx) {
+            const locs = getWeatherLocations();
+            locs.splice(idx, 1);
+            saveWeatherLocations(locs);
+            openWetterSettings();
+        }
+
+        async function wsAdd() {
+            const name = document.getElementById('wsNewName').value.trim();
+            if (!name) return;
+            const btn = document.querySelector('#wetterSettingsModal button[onclick="wsAdd()"]');
+            btn.textContent = 'Suche...';
+            btn.disabled = true;
+            try {
+                const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1&language=de&format=json`);
+                const geo = await res.json();
+                if (!geo.results?.length) { alert('Ort nicht gefunden: ' + name); btn.textContent = '+ Hinzufügen'; btn.disabled = false; return; }
+                const r = geo.results[0];
+                const locs = getWeatherLocations();
+                locs.push({ name: r.name, lat: r.latitude, lon: r.longitude });
+                saveWeatherLocations(locs);
+                openWetterSettings();
+            } catch(e) { alert('Fehler: ' + e.message); }
+            btn.textContent = '+ Hinzufügen'; btn.disabled = false;
+        }
+
+        async function wsSave() {
+            const locs = getWeatherLocations();
+            // Namen aktualisieren
+            for (let i = 0; i < locs.length; i++) {
+                const inp = document.getElementById(`wsName${i}`);
+                if (inp) locs[i].name = inp.value.trim() || locs[i].name;
+            }
+            saveWeatherLocations(locs);
+            closeWetterSettings();
+            loadAllWeatherLocations();
         }
 
         async function loadWeatherForLocation(locationName, lat, lon) {
@@ -8913,5 +8967,27 @@ TECHNOLOGIE-STACK:
     <div id="versionInfo" style="position: fixed; bottom: 8px; right: 8px; font-size: 10px; color: #999; background: white; padding: 4px 8px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); z-index: 9999;">
         v2026-02-22_20:30 (Tagesprogramm: Timezone Fix)
     </div>
+
+    <!-- Wetter Standorte Modal -->
+    <div id="wetterSettingsModal" class="modal" style="display:none;">
+        <div class="modal-overlay" onclick="closeWetterSettings()"></div>
+        <div class="modal-content" style="max-width:440px;">
+            <div class="modal-header">
+                <h2>🌤️ Wetter-Standorte</h2>
+                <button class="modal-close" onclick="closeWetterSettings()">✕</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size:13px;color:var(--text-gray);margin:0 0 16px 0;">
+                    Standorte bearbeiten, umbenennen oder neue Orte hinzufügen.
+                </p>
+                <div id="wetterSettingsBody"></div>
+            </div>
+            <div class="modal-actions" style="padding:16px;">
+                <button class="btn btn-secondary" onclick="closeWetterSettings()">Abbrechen</button>
+                <button class="btn btn-primary" onclick="wsSave()">Speichern & Aktualisieren</button>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>

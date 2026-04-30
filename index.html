@@ -3591,15 +3591,15 @@ TECHNOLOGIE-STACK:
             const typName = typ === 'BF' ? 'Betriebsferien' : 'Feiertage';
             const today = new Date().toISOString().split('T')[0];
             
-            // Get all future entries of this type
+            // Alle Einträge dieses Typs (inkl. Vergangenheit)
             const futureEntries = allAbwesenheiten.filter(a => 
-                a.typ === typ && a.von >= today
+                a.typ === typ
             );
             
             if (futureEntries.length === 0) {
                 document.getElementById('bfFtList').innerHTML = `
                     <p style="text-align: center; padding: 40px; color: var(--text-gray);">
-                        Keine zukünftigen ${typName} gefunden
+                        Keine ${typName} gefunden
                     </p>
                 `;
                 document.getElementById('bfFtListContainer').style.display = 'block';

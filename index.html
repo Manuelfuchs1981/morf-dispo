@@ -5278,6 +5278,11 @@ TECHNOLOGIE-STACK:
                     const isToday = day===0;
                     const left = day * 24 * TP_HOUR_W;
                     const dayW = 24 * TP_HOUR_W;
+                    // Nacht-Shading: 00-06 und 20-24 dunkler
+                    const nightL1 = 0;               // 00:00
+                    const nightW1 = 6 * TP_HOUR_W;   // 06:00
+                    const nightL2 = 20 * TP_HOUR_W;  // 20:00
+                    const nightW2 = 4 * TP_HOUR_W;   // 24:00
                     bgGrid += `<div data-date="${iso}"
                             style="position:absolute;left:${left}px;width:${dayW}px;height:100%;
                             border-left:${wd===1?'2px solid #d1d5db':'1px solid #f0f0f0'};
@@ -5296,7 +5301,10 @@ TECHNOLOGIE-STACK:
                                 transparent 45px,
                                 transparent 59px,
                                 #e8e8e8 59px, #e8e8e8 60px
-                            );"></div>`;
+                            );">
+                        <div style="position:absolute;left:${nightL1}px;width:${nightW1}px;height:100%;background:rgba(0,0,0,0.045);pointer-events:none;"></div>
+                        <div style="position:absolute;left:${nightL2}px;width:${nightW2}px;height:100%;background:rgba(0,0,0,0.045);pointer-events:none;"></div>
+                    </div>`;
                 }
 
                 rows += `<div style="display:flex;border-top:2px solid #d1d5db;

@@ -557,7 +557,7 @@ TECHNOLOGIE-STACK:
         .app-content {
             max-width: 1600px;
             margin: 0 auto;
-            padding: 8px 32px 32px 32px;
+            padding: 24px 32px 32px 32px;
         }
 
         /* Navigation */
@@ -839,11 +839,12 @@ TECHNOLOGIE-STACK:
         }
 
         .data-table thead {
-            background: var(--bg-light);
+            background: #dde0e5;
         }
 
         .data-table th {
-            padding: 4px 16px;
+            padding: 4px 10px;
+            font-size: 11px;
             text-align: left;
             font-size: 13px;
             font-weight: 600;
@@ -853,13 +854,17 @@ TECHNOLOGIE-STACK:
         }
 
         .data-table td {
-            padding: 4px 16px;
+            padding: 4px 10px;
             border-top: 1px solid var(--border);
-            font-size: 14px;
+            font-size: 13px;
+        }
+
+        .data-table tbody tr:nth-child(even) {
+            background: #f9fafb;
         }
 
         .data-table tr:hover {
-            background: var(--bg-light);
+            background: #f0f4ff;
         }
 
         /* Badges */
@@ -1153,7 +1158,7 @@ TECHNOLOGIE-STACK:
             width: 13px;
             height: 13px;
             accent-color: #6b7280;
-            border: 1px solid #d1d5db;
+            border: 1px solid #dde0e5;
         }
 
         .filter-option:first-child {
@@ -1800,7 +1805,6 @@ TECHNOLOGIE-STACK:
                     <input 
                         type="text" 
                         id="username" 
-                        name="username" 
                         required 
                         autocomplete="username"
                         placeholder="Ihr Benutzername">
@@ -1811,7 +1815,6 @@ TECHNOLOGIE-STACK:
                     <input 
                         type="password" 
                         id="password" 
-                        name="password" 
                         required 
                         autocomplete="current-password"
                         placeholder="Ihr Passwort">
@@ -2204,6 +2207,10 @@ TECHNOLOGIE-STACK:
                         <select id="filterAuftragEc" onchange="filterAuftraege()" style="padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px;">
                             <option value="">Alle ECs</option>
                         </select>
+                        <label style="display:flex; align-items:center; gap:8px; font-size:14px; cursor:pointer; white-space:nowrap; padding:4px 0;">
+                            <input type="checkbox" id="filterShowFix" onchange="filterAuftraege()" style="width:auto; cursor:pointer;">
+                            FIX anzeigen
+                        </label>
                     </div>
                 </div>
 
@@ -2212,12 +2219,42 @@ TECHNOLOGIE-STACK:
             </div>
 
             <div id="tagesprogrammView" class="content-view">
-                <div class="page-header">
-                    <h1 class="page-title">Tagesprogramm</h1>
+
+
+                <!-- OBEN: Auftragsliste (nicht verplant) -->
+                <div class="data-card" style="margin-bottom:12px;">
+                    <div style="padding:12px 16px; border-bottom:1px solid var(--border); display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                        <strong style="font-size:14px; white-space:nowrap;">📋 Nicht verplant</strong>
+                        <input type="text" id="tpSearch" placeholder="🔍 Suche..." oninput="tpFilter()" style="padding:6px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; min-width:160px;">
+                        <select id="tpFilterFiliale" onchange="tpFilter()" style="padding:6px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px;">
+                            <option value="">Alle Filialen</option>
+                            <option value="ZH">ZH</option>
+                            <option value="AG">AG</option>
+                            <option value="GL">GL</option>
+                            <option value="GR">GR</option>
+                            <option value="SG">SG</option>
+                            <option value="ZS">ZS</option>
+                        </select>
+                        <span id="tpListCount" style="font-size:12px; color:var(--text-gray);"></span>
+                    </div>
+                    <div id="tpAuftragListe" style="overflow-y:auto; max-height:172px; border-radius:6px; transition:background 0.15s;"></div>
                 </div>
-                <div class="coming-soon">
-                    <div style="font-size: 64px; margin-bottom: 16px;">🗓️</div>
-                    <h3>Wird gebaut...</h3>
+
+                <!-- UNTEN: Gantt Planungsleiste -->
+                <div class="data-card" style="overflow:hidden;">
+                    <div style="padding:10px 16px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <strong style="font-size:14px;">📅 Planung</strong>
+                            <button class="btn btn-secondary" onclick="tpScrollToToday()" style="padding:4px 10px; font-size:13px;">Heute</button>
+                            <button class="btn btn-secondary" onclick="tpResetAlleDispos()" style="padding:4px 10px; font-size:13px; color:#ef4444; border-color:#ef4444;" title="Alle geplanten Aufträge zurück in die Liste">🗑 Planung leeren</button>
+                        </div>
+                        <span style="font-size:12px; color:var(--text-gray);">Auftrag auf gewünschten Tag ziehen · 12 Monate vorwärts scrollbar</span>
+                    </div>
+                    <div style="overflow-x:auto; overflow-y:visible; cursor:grab;" id="tpGanttScroll"
+                        onmousedown="tpScrollStart(event)" onmousemove="tpScrollMove(event);tpPreviewMove(event);" onmouseup="tpScrollEnd()" onmouseleave="tpScrollEnd();tpPreviewHide();" ondragleave="tpPreviewHide()" style="position:relative;">
+                        <div id="tpPlanungsleiste" style="min-width:1540px;"></div>
+
+                    </div>
                 </div>
             </div>
 
@@ -2664,6 +2701,9 @@ TECHNOLOGIE-STACK:
             }
             if (viewName === 'kalender') {
                 loadKalender();
+            }
+            if (viewName === 'tagesprogramm') {
+                loadTagesprogramm();
             }
             if (viewName === 'auftraege') {
                 loadAuftraege();
@@ -3612,8 +3652,8 @@ TECHNOLOGIE-STACK:
                 
                 if (!patterns[pattern]) {
                     patterns[pattern] = {
-                        monthDay: `${vonParts[2]}.${vonParts[1]}`,
-                        monthDayBis: `${bisParts[2]}.${bisParts[1]}`,
+                        monthDay: `${vonParts[2]}/${vonParts[1]}`,
+                        monthDayBis: `${bisParts[2]}/${bisParts[1]}`,
                         years: {},
                         entries: []
                     };
@@ -3674,7 +3714,7 @@ TECHNOLOGIE-STACK:
                         <div style="padding: 12px; margin-bottom: 8px; background: var(--bg-light); border-radius: 8px;">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <div>
-                                    <strong>${entries[0].von} - ${entries[0].bis}</strong>
+                                    <strong>${fmtDate(entries[0].von)} – ${fmtDate(entries[0].bis)}</strong>
                                     <br>
                                     <small style="color: var(--text-gray);">${mitarbeiterCount} Mitarbeiter</small>
                                 </div>
@@ -4344,11 +4384,11 @@ TECHNOLOGIE-STACK:
         const AUSFUEHRUNGSARTEN = ['M66','HM','KSP','KP-S','KP-T','KP-A','Grinding','Demark.','SRT65','SRT45','Folien','Frankenstein','Madonna','M21','Lola','Hüssy One'];
 
         const STATUS_CONFIG = {
-            'KB': { label: 'KB', color: '#6b7280', bg: '#f3f4f6' },
-            'AN': { label: 'AN', color: '#d97706', bg: '#fef3c7' },
-            'RES': { label: 'RES', color: '#7c3aed', bg: '#ede9fe' },
-            'PROV': { label: 'PROV', color: '#2563eb', bg: '#dbeafe' },
-            'FIX': { label: 'FIX', color: '#059669', bg: '#d1fae5' }
+            'KB':   { label: 'KB',   color: '#ef4444' },
+            'AN':   { label: 'AN',   color: '#f59e0b' },
+            'RES':  { label: 'RES',  color: '#8b5cf6' },
+            'PROV': { label: 'PROV', color: '#3b82f6' },
+            'FIX':  { label: 'FIX',  color: '#10b981' }
         };
 
         const FILIALE_MAP = {
@@ -4411,6 +4451,15 @@ TECHNOLOGIE-STACK:
             }
         }
 
+        let auftragSortCol = 'einsatzdatum';
+        let auftragSortDir = 1;
+
+        function sortAuftraege(col) {
+            if (auftragSortCol === col) auftragSortDir *= -1;
+            else { auftragSortCol = col; auftragSortDir = 1; }
+            filterAuftraege();
+        }
+
         function renderAuftraege(list) {
             const container = document.getElementById('auftraegeTableContainer');
             if (!list || list.length === 0) {
@@ -4418,49 +4467,127 @@ TECHNOLOGIE-STACK:
                 return;
             }
 
-            const rows = list.map(a => {
+            const sorted = [...list].sort((a, b) => {
+                let av = a[auftragSortCol] ?? '';
+                let bv = b[auftragSortCol] ?? '';
+                if (auftragSortCol === 'einsatzort') {
+                    av = (a.einsatzort||'').match(/\d{4}/)?.[0] || '';
+                    bv = (b.einsatzort||'').match(/\d{4}/)?.[0] || '';
+                }
+                if (av < bv) return -auftragSortDir;
+                if (av > bv) return auftragSortDir;
+                return 0;
+            });
+            const rows = sorted.map(a => {
                 const isFix = a.status === 'FIX';
                 const s = STATUS_CONFIG[a.status] || STATUS_CONFIG['KB'];
                 const arten = Array.isArray(a.ausfuehrungsart) ? a.ausfuehrungsart.join(', ') : (a.ausfuehrungsart || '–');
-                const datum = a.einsatzdatum ? new Date(a.einsatzdatum).toLocaleDateString('de-CH') : '–';
-                const zeit = a.einsatzzeit ? a.einsatzzeit.substring(0,5) : '';
-                return `<tr style="${isFix ? 'opacity:0.45;' : ''}">
-                    <td style="font-weight:700; font-family:monospace;">${a.id}</td>
-                    <td>
-                        <div style="font-weight:600;">${datum}${zeit ? ' ' + zeit : ''}</div>
-                        <div style="font-size:12px; color:var(--text-gray);">${a.filiale || '–'}</div>
+                const datum = fmtDate(a.einsatzdatum);
+                const zeit = a.einsatzzeit ? a.einsatzzeit.substring(0,5) : '–';
+                const nameParts = (a.verantwortlicher?.name || '').trim().split(' ');
+                const initials = nameParts.length >= 2
+                    ? nameParts[0][0] + nameParts[nameParts.length-1][0]
+                    : nameParts[0]?.[0] || '–';
+                return `<tr>
+                    <td style="text-align:center;">
+                        <span title="Disposition" style="cursor:pointer; font-size:15px;" onclick="openDispoDialog(${a.id})">📅</span>
                     </td>
-                    <td>
-                        <div>${a.einsatzort || '–'}</div>
-                        <div style="font-size:12px; color:var(--text-gray);">${a.projektnummer}</div>
-                    </td>
-                    <td style="font-size:13px;">${arten}</td>
-                    <td style="font-size:13px;">${a.aufwand_stunden ? a.aufwand_stunden + 'h' : '–'}</td>
-                    <td><span style="display:inline-block; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:700; color:${s.color}; background:${s.bg};">${s.label}</span></td>
-                    <td style="font-size:13px;">${a.verantwortlicher?.name || '–'}</td>
-                    <td>
-                        ${canEditAuftraege() ? `<button class="btn btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="openAuftragDialog(${a.id})">✏️</button>` : ''}
-                        ${(currentUser?.role === 'admin' || currentUser?.role === 'geschaeftsleitung') ? `<button class="btn btn-secondary" style="padding:4px 10px; font-size:12px; margin-left:4px; color:var(--danger);" onclick="deleteAuftrag(${a.id})">🗑️</button>` : ''}
+                    <td style="font-weight:700; color:${s.color};">${s.label}</td>
+                    
+                    <td>${datum}</td>
+                    <td>${zeit}</td>
+                    <td>${a.filiale || '–'}</td>
+                    <td>${(() => { const m = (a.einsatzort||'').match(/^(.+?),?\s*\d{4}/); return m ? m[1].trim() : (a.einsatzort || '–'); })()}</td>
+                    <td>${(() => { const plz = (a.einsatzort||'').match(/(\d{4})/)?.[1] || ''; const ort = (a.einsatzort||'').match(/\d{4}\s+(.+)/)?.[1]?.trim() || ''; return plz ? plz + ' ' + ort : '–'; })()}</td>
+                    <td style="color:var(--text-gray);">${a.projektnummer}</td>
+                    <td>${arten}</td>
+                    <td>${a.aufwand_stunden ? a.aufwand_stunden + 'h' : '–'}</td>
+                    <td style="font-weight:600;">${initials.toUpperCase()}</td>
+                    <td style="text-align:right; position:sticky; right:0; background:white;">
+                        ${canEditAuftraege() ? `<span title="Bearbeiten" style="cursor:pointer; font-size:15px; margin-right:6px;" onclick="openAuftragDialog(${a.id})">✏️</span>` : ''}
+                        ${(currentUser?.role === 'admin' || currentUser?.role === 'geschaeftsleitung') ? `<span title="Löschen" style="cursor:pointer; font-size:15px;" onclick="deleteAuftrag(${a.id})">🗑️</span>` : ''}
                     </td>
                 </tr>`;
             }).join('');
 
+            // Sortier-Pfeile aktualisieren
+            ['status','einsatzdatum','filiale','einsatzort','projektnummer','aufwand_stunden','verantwortlicher'].forEach(col => {
+                const el = document.getElementById('sort_' + col);
+                if (el) {
+                    if (col !== auftragSortCol) {
+                        el.innerHTML = '<span style="display:inline-flex;flex-direction:column;gap:0px;font-size:8px;vertical-align:middle;color:#aaa;margin-left:3px;"><span>▲</span><span>▼</span></span>';
+                    } else if (auftragSortDir === 1) {
+                        el.innerHTML = '<span style="display:inline-flex;flex-direction:column;gap:0px;font-size:8px;vertical-align:middle;margin-left:3px;"><span style=\'color:#333;\'>▲</span><span style=\'color:#ccc;\'>▼</span></span>';
+                    } else {
+                        el.innerHTML = '<span style="display:inline-flex;flex-direction:column;gap:0px;font-size:8px;vertical-align:middle;margin-left:3px;"><span style=\'color:#ccc;\'>▲</span><span style=\'color:#333;\'>▼</span></span>';
+                    }
+                }
+            });
+
             container.innerHTML = `<div class="data-card">
-                <table class="data-table" style="width:100%">
-                    <thead><tr>
-                        <th>ID</th>
-                        <th>Datum</th>
-                        <th>Ort / Projekt</th>
+                <table class="data-table" style="width:100%; white-space:nowrap; table-layout:auto;">
+                    <thead><tr style="font-size:11px;">
+                        <th style="width:28px;"></th>
+                        <th style="cursor:pointer; user-select:none; white-space:nowrap;" onclick="sortAuftraege('status')">Status <span id="sort_status"><span style="display:inline-flex;flex-direction:column;gap:0px;font-size:8px;vertical-align:middle;color:#aaa;margin-left:3px;"><span>▲</span><span>▼</span></span></span></th>
+                        <th style="display:none;">ID</th>
+                        <th style="cursor:pointer; user-select:none; white-space:nowrap;" onclick="sortAuftraege('einsatzdatum')">Datum <span id="sort_einsatzdatum"><span style="display:inline-flex;flex-direction:column;gap:0px;font-size:8px;vertical-align:middle;color:#aaa;margin-left:3px;"><span>▲</span><span>▼</span></span></span></th>
+                        <th>Zeit</th>
+                        <th style="cursor:pointer; user-select:none; white-space:nowrap;" onclick="sortAuftraege('filiale')">Filiale <span id="sort_filiale"><span style="display:inline-flex;flex-direction:column;gap:0px;font-size:8px;vertical-align:middle;color:#aaa;margin-left:3px;"><span>▲</span><span>▼</span></span></span></th>
+                        <th>Strasse</th>
+                        <th style="cursor:pointer; user-select:none; white-space:nowrap;" onclick="sortAuftraege('einsatzort')">PLZ / Ort <span id="sort_einsatzort"><span style="display:inline-flex;flex-direction:column;gap:0px;font-size:8px;vertical-align:middle;color:#aaa;margin-left:3px;"><span>▲</span><span>▼</span></span></span></th>
+                        <th style="cursor:pointer; user-select:none; white-space:nowrap;" onclick="sortAuftraege('projektnummer')">Projektnummer <span id="sort_projektnummer"><span style="display:inline-flex;flex-direction:column;gap:0px;font-size:8px;vertical-align:middle;color:#aaa;margin-left:3px;"><span>▲</span><span>▼</span></span></span></th>
                         <th>Ausführung</th>
-                        <th>Aufwand</th>
-                        <th>Status</th>
-                        <th>Verantwortlich</th>
-                        <th></th>
+                        <th style="cursor:pointer; user-select:none; white-space:nowrap;" onclick="sortAuftraege('aufwand_stunden')">Aufwand <span id="sort_aufwand_stunden"><span style="display:inline-flex;flex-direction:column;gap:0px;font-size:8px;vertical-align:middle;color:#aaa;margin-left:3px;"><span>▲</span><span>▼</span></span></span></th>
+                        <th style="cursor:pointer; user-select:none; white-space:nowrap;" onclick="sortAuftraege('verantwortlicher')">TKB <span id="sort_verantwortlicher"><span style="display:inline-flex;flex-direction:column;gap:0px;font-size:8px;vertical-align:middle;color:#aaa;margin-left:3px;"><span>▲</span><span>▼</span></span></span></th>
+                        <th style="position:sticky; right:0; background:#dde0e5; z-index:1;"></th>
                     </tr></thead>
                     <tbody>${rows}</tbody>
                 </table>
             </div>`;
         }
+
+        function toggleEcAusschlussDropdown(event) {
+            event.stopPropagation();
+            const menu = document.getElementById('ecAusschlussContainer');
+            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function updateEcAusschlussLabel() {
+            const checked = Array.from(document.querySelectorAll('.ec-ausschluss-cb:checked'));
+            const label = document.getElementById('ecAusschlussLabel');
+            if (!label) return;
+            if (checked.length === 0) label.textContent = 'Keine Ausschlüsse';
+            else label.textContent = checked.map(cb => cb.closest('div').querySelector('span').textContent.trim()).join(', ');
+        }
+
+        document.addEventListener('click', (e) => {
+            const wrapper = document.getElementById('ecAusschlussDropdownWrapper');
+            if (wrapper && !wrapper.contains(e.target)) {
+                const menu = document.getElementById('ecAusschlussContainer');
+                if (menu) menu.style.display = 'none';
+            }
+        });
+
+        function toggleUntergrundDropdown(event) {
+            event.stopPropagation();
+            const menu = document.getElementById('untergrundContainer');
+            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function updateUntergrundLabel() {
+            const checked = Array.from(document.querySelectorAll('.untergrund-cb:checked')).map(c => c.value);
+            const label = document.getElementById('untergrundLabel');
+            if (!label) return;
+            label.textContent = checked.length === 0 ? 'Bitte wählen...' : checked.join(', ');
+        }
+
+        document.addEventListener('click', (e) => {
+            const wrapper = document.getElementById('untergrundDropdownWrapper');
+            if (wrapper && !wrapper.contains(e.target)) {
+                const menu = document.getElementById('untergrundContainer');
+                if (menu) menu.style.display = 'none';
+            }
+        });
 
         function toggleAusfuehrungsartDropdown(event) {
             event.stopPropagation();
@@ -4524,8 +4651,10 @@ TECHNOLOGIE-STACK:
             const ausfuehrungSelected = Array.from(document.querySelectorAll('.filter-ausfuehrung-cb:checked')).map(c => c.value);
             updateAusfuehrungLabel();
             const ecId = document.getElementById('filterAuftragEc').value;
+            const showFix = document.getElementById('filterShowFix')?.checked || false;
 
             const filtered = allAuftraege.filter(a => {
+                if (!showFix && a.status === 'FIX') return false;
                 if (status && a.status !== status) return false;
                 if (filiale && a.filiale !== filiale) return false;
                 if (ausfuehrungSelected.length > 0 && (!Array.isArray(a.ausfuehrungsart) || !ausfuehrungSelected.some(sel => a.ausfuehrungsart.includes(sel)))) return false;
@@ -4555,16 +4684,14 @@ TECHNOLOGIE-STACK:
 
             // Render Ausführungsart Checkboxen
             document.getElementById('ausfuehrungsartContainer').innerHTML =
-                `<div style="padding:6px 12px; border-bottom:1px solid #e5e7eb;">
-                    <label style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-size:14px;">
-                        <input type="checkbox" id="ausfuehrungsartAll" onchange="toggleAllAusfuehrungsart(this)"> <strong>Alle</strong>
-                    </label>
+                `<div style="padding:6px 12px; border-bottom:1px solid #e5e7eb; background:#f9fafb;">
+                    <input type="checkbox" id="ausfuehrungsartAll" onchange="toggleAllAusfuehrungsart(this)" style="width:auto; margin-right:8px; vertical-align:middle; cursor:pointer;">
+                    <strong style="font-size:14px; vertical-align:middle; cursor:pointer;" onclick="document.getElementById('ausfuehrungsartAll').click()">Alle</strong>
                 </div>` +
                 AUSFUEHRUNGSARTEN.map(a =>
-                `<div style="padding:5px 12px;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">
-                    <label style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-size:14px; width:100%;">
-                        <input type="checkbox" value="${a}" class="ausfuehrung-cb" onchange="updateAusfuehrungsartLabel()"> <span>${a}</span>
-                    </label>
+                `<div style="padding:6px 12px; cursor:pointer;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">
+                    <input type="checkbox" value="${a}" class="ausfuehrung-cb" id="acb_${a.replace(/[^a-z0-9]/gi,'_')}" onchange="updateAusfuehrungsartLabel()" style="width:auto; margin-right:8px; vertical-align:middle; cursor:pointer;">
+                    <span style="font-size:14px; vertical-align:middle; cursor:pointer;" onclick="document.getElementById('acb_${a.replace(/[^a-z0-9]/gi,'_')}').click()">${a}</span>
                 </div>`
             ).join('');
 
@@ -4579,11 +4706,12 @@ TECHNOLOGIE-STACK:
                 .order('nachname');
             const ecs = ecData || [];
             ecContainer.innerHTML = ecs.length === 0
-                ? '<span style="color:var(--text-gray); font-size:13px;">Keine ECs verfügbar</span>'
+                ? '<div style="padding:8px 12px; color:var(--text-gray); font-size:14px;">Keine ECs verfügbar</div>'
                 : ecs.map(m =>
-                    `<label style="display:flex; align-items:center; gap:4px; font-size:13px; cursor:pointer; padding:4px 8px; border:1px solid var(--border); border-radius:6px; user-select:none;">
-                        <input type="checkbox" value="${m.id}" class="ec-ausschluss-cb"> ${m.vorname} ${m.nachname}
-                    </label>`
+                    `<div style="padding:6px 12px; cursor:pointer;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">
+                        <input type="checkbox" value="${m.id}" class="ec-ausschluss-cb" id="eccb_${m.id}" onchange="updateEcAusschlussLabel()" style="width:auto; margin-right:8px; vertical-align:middle; cursor:pointer;">
+                        <span style="font-size:14px; vertical-align:middle; cursor:pointer;" onclick="document.getElementById('eccb_${m.id}').click()">${m.vorname} ${m.nachname}</span>
+                    </div>`
                 ).join('');
 
             // Verantwortlicher Dropdown befüllen
@@ -4603,7 +4731,11 @@ TECHNOLOGIE-STACK:
                     document.getElementById('auftragDatum').value = a.einsatzdatum || '';
                     document.getElementById('auftragZeit').value = a.einsatzzeit ? a.einsatzzeit.substring(0,5) : '';
                     document.getElementById('auftragOrt').value = a.einsatzort || '';
-                    document.getElementById('auftragUntergrund').value = a.untergrund || '';
+                    // Untergrund Checkboxen setzen
+                    document.querySelectorAll('.untergrund-cb').forEach(cb => {
+                        cb.checked = (a.untergrund || '').split(', ').includes(cb.value);
+                    });
+                    updateUntergrundLabel();
                     document.getElementById('auftragAnzahlEc').value = a.anzahl_ec || 1;
                     document.getElementById('auftragAnzahlMa').value = a.anzahl_ma || 1;
                     document.getElementById('auftragAufwand').value = a.aufwand_stunden || '';
@@ -4632,6 +4764,7 @@ TECHNOLOGIE-STACK:
                     document.querySelectorAll('.ec-ausschluss-cb').forEach(cb => {
                         cb.checked = ausschlussIds.includes(cb.value);
                     });
+                    updateEcAusschlussLabel();
                 }
             } else {
                 // Neuer Auftrag – Felder leeren
@@ -4642,7 +4775,8 @@ TECHNOLOGIE-STACK:
                 document.getElementById('auftragDatum').value = '';
                 document.getElementById('auftragZeit').value = '';
                 document.getElementById('auftragOrt').value = '';
-                document.getElementById('auftragUntergrund').value = '';
+                document.querySelectorAll('.untergrund-cb').forEach(cb => cb.checked = false);
+                updateUntergrundLabel();
                 document.getElementById('auftragAnzahlEc').value = 1;
                 document.getElementById('auftragAnzahlMa').value = 1;
                 document.getElementById('auftragAufwand').value = '';
@@ -4739,8 +4873,14 @@ TECHNOLOGIE-STACK:
             if (addrMatch) document.getElementById('auftragOrt').value = addrMatch[1].trim();
 
             // Untergrund
-            const untergrundMatch = text.match(/Untergrund:\s*(\w+)/);
-            if (untergrundMatch) document.getElementById('auftragUntergrund').value = untergrundMatch[1];
+            const untergrundMatch = text.match(/Untergrund:\s*([\w\s]+?)(?:\s+(?:Einsatz|Kommentar|Kunde|#EC|Projekt|Arbeitstyp|$))/);
+            if (untergrundMatch) {
+                const uWert = untergrundMatch[1].trim();
+                document.querySelectorAll('.untergrund-cb').forEach(cb => {
+                    if (cb.value.toLowerCase() === uWert.toLowerCase()) cb.checked = true;
+                });
+                updateUntergrundLabel();
+            }
 
             // Anzahl EC/MA: "#EC: 1 | #MA: 1"
             const ecMatch = text.match(/#EC:\s*(\d+)/);
@@ -4756,8 +4896,8 @@ TECHNOLOGIE-STACK:
             const beschrMatch = text.match(/Einsatzbeschreibung:\s*(.+?)(?:Kommentar|$)/s);
             if (beschrMatch) document.getElementById('auftragBeschreibung').value = beschrMatch[1].trim().substring(0, 500);
 
-            // Kommentar FL
-            const flMatch = text.match(/Kommentar FL:\s*(.+?)(?:Projektname|Arbeitstyp|#EC|$)/s);
+            // Kommentar Disposition
+            const flMatch = text.match(/Kommentar Disposition:\s*(.+?)(?:Projektname|Arbeitstyp|#EC|$)/s);
             if (flMatch && flMatch[1].trim()) document.getElementById('auftragKommentarFl').value = flMatch[1].trim().substring(0, 300);
 
             // Kommentar EC
@@ -4805,7 +4945,7 @@ TECHNOLOGIE-STACK:
                 p_einsatzdatum: datum,
                 p_einsatzzeit: document.getElementById('auftragZeit').value || null,
                 p_einsatzort: document.getElementById('auftragOrt').value || null,
-                p_untergrund: document.getElementById('auftragUntergrund').value || null,
+                p_untergrund: Array.from(document.querySelectorAll('.untergrund-cb:checked')).map(c => c.value).join(', ') || null,
                 p_anzahl_ec: parseInt(document.getElementById('auftragAnzahlEc').value) || 1,
                 p_anzahl_ma: parseInt(document.getElementById('auftragAnzahlMa').value) || 0,
                 p_aufwand_stunden: parseFloat(document.getElementById('auftragAufwand').value) || null,
@@ -4865,6 +5005,1165 @@ TECHNOLOGIE-STACK:
                     p_id: id
                 });
                 if (error || data?.error) throw new Error(data?.error || error?.message);
+                await loadAuftraege();
+            } catch (err) {
+                alert('❌ Fehler: ' + err.message);
+            }
+        }
+
+        // ============================================
+
+        // ============================================
+        // TAGESPROGRAMM
+        // ============================================
+        let tpAllAuftraege = [];
+        let tpDispoMap = {}; // auftrag_id -> dispo
+        let tpECs = [];
+        let tpDragAuftragId = null;
+        let tpDragOffsetPct = 0; // wo im Balken wurde geklickt
+
+        function tpGetSelectedDate() {
+            const el = document.getElementById('tpSelectedDate');
+            if (el && el.value) return el.value;
+            return new Date().toISOString().slice(0,10);
+        }
+
+
+        async function tpResetAlleDispos() {
+            const anzahl = Object.keys(tpDispoMap).length;
+            if (anzahl === 0) { alert('Keine geplanten Aufträge vorhanden.'); return; }
+            if (!confirm(`${anzahl} geplante Auftrag${anzahl !== 1 ? '\u0308e' : ''} aus der Planung entfernen und zurück in die Liste verschieben?`)) return;
+            try {
+                const { error } = await supabaseClient
+                    .from('dispo_einsaetze')
+                    .delete()
+                    .neq('id', 0); // alle löschen
+                if (error) throw error;
+                tpDispoMap = {};
+                renderTagesprogramm();
+            } catch(err) { alert('❌ ' + err.message); }
+        }
+
+        function tpScrollToToday() {
+            const scrollEl = document.getElementById('tpGanttScroll');
+            if (!scrollEl) return;
+            const todayLeft = TP_EC_W + TP_DAYS_BEFORE * TP_DAY_W - scrollEl.clientWidth / 2;
+            scrollEl.scrollLeft = Math.max(0, todayLeft);
+        }
+
+        function tpNavDay(dir) {
+            const el = document.getElementById('tpSelectedDate');
+            if (!el) return;
+            const d = new Date(el.value || new Date());
+            d.setDate(d.getDate() + dir);
+            el.value = d.toISOString().slice(0,10);
+            renderTagesprogramm();
+        }
+
+        function tpGoToday() {
+            const el = document.getElementById('tpSelectedDate');
+            if (el) el.value = new Date().toISOString().slice(0,10);
+            renderTagesprogramm();
+        }
+
+        async function loadTagesprogramm() {
+            // Datum initialisieren
+            const dateEl = document.getElementById('tpSelectedDate');
+            if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().slice(0,10);
+            try {
+                const [auftraegeRes, dispoRes, ecRes] = await Promise.all([
+                    supabaseClient.from('auftraege').select('*, verantwortlicher:system_users!verantwortlicher_id(name)').order('einsatzdatum'),
+                    supabaseClient.from('dispo_einsaetze').select('*, ec:mitarbeiter!ec_id(vorname, nachname)'),
+                    supabaseClient.from('v_mitarbeiter_aktiv').select('id, vorname, nachname').eq('funktion', 'EC').eq('aktiv', true).order('nachname')
+                ]);
+                tpAllAuftraege = auftraegeRes.data || [];
+                tpECs = ecRes.data || [];
+                // Map auftrag_id -> dispo
+                tpDispoMap = {};
+                (dispoRes.data || []).forEach(d => { tpDispoMap[d.auftrag_id] = d; });
+                renderTagesprogramm();
+            } catch (err) {
+                console.error('Tagesprogramm laden:', err);
+            }
+        }
+
+        function tpFilter() {
+            renderTpListe();
+        }
+
+        function renderTagesprogramm() {
+            renderTpListe();
+            renderTpGantt();
+        }
+
+        function renderTpListe() {
+            const search = (document.getElementById('tpSearch')?.value || '').toLowerCase();
+            const filiale = document.getElementById('tpFilterFiliale')?.value || '';
+            // Nicht verplante Aufträge = kein Eintrag in tpDispoMap
+            const unplanned = tpAllAuftraege.filter(a => {
+                if (tpDispoMap[a.id]) return false;
+                if (filiale && a.filiale !== filiale) return false;
+                if (search) {
+                    const h = [a.id, a.projektnummer, a.einsatzort, a.filiale].join(' ').toLowerCase();
+                    if (!h.includes(search)) return false;
+                }
+                return true;
+            });
+
+            const s = STATUS_CONFIG[undefined] || {};
+            const container = document.getElementById('tpAuftragListe');
+            document.getElementById('tpListCount').textContent = `${unplanned.length} Aufträge`;
+
+            if (unplanned.length === 0) {
+                container.innerHTML = '<span style="color:var(--text-gray); font-size:13px; padding:8px 0;">Alle Aufträge verplant ✓</span>';
+                return;
+            }
+
+            // Zurückgelegte Aufträge zuoberst (in Reihenfolge des Zurücklegens)
+            if (_tpReturnedIds.size > 0) {
+                const returned = unplanned.filter(a => _tpReturnedIds.has(a.id));
+                const rest = unplanned.filter(a => !_tpReturnedIds.has(a.id));
+                unplanned.length = 0;
+                unplanned.push(...returned, ...rest);
+            }
+
+            const rows = unplanned.map((a, i) => {
+                const isReturned = _tpReturnedIds.has(a.id);
+                const sc = STATUS_CONFIG[a.status] || STATUS_CONFIG['KB'];
+                const datum = fmtDate(a.einsatzdatum);
+                const ort = (a.einsatzort || '').match(/\d{4}\s+(.+)/)?.[1]?.trim() || a.einsatzort || '–';
+                const plz = (a.einsatzort || '').match(/(\d{4})/)?.[1] || '';
+                const arten = Array.isArray(a.ausfuehrungsart) ? a.ausfuehrungsart.join(', ') : (a.ausfuehrungsart || '–');
+                return `<tr
+                    onmousedown="tpPickup(event, ${a.id})"
+                    style="cursor:grab; border-left:3px solid ${isReturned ? '#ef4444' : sc.color}; ${isReturned ? 'background:#fee2e2;' : i%2===1?'background:#f9fafb;':'background:white;'} user-select:none;"
+                    title="Ziehen zum Einplanen">
+                    <td style="padding:3px 10px; font-weight:700; color:${sc.color}; white-space:nowrap;">${sc.label}</td>
+                    
+                    <td style="padding:3px 6px; white-space:nowrap; font-size:13px;">${datum}</td>
+                    <td style="padding:3px 6px; font-size:13px;">${a.filiale || '–'}</td>
+                    <td style="padding:3px 6px; font-size:13px; max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${ort}</td>
+                    <td style="padding:3px 6px; font-size:12px; color:var(--text-gray);">${plz}</td>
+                    <td style="padding:3px 6px; font-size:12px; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${arten}</td>
+                    <td style="padding:3px 6px; font-size:12px; white-space:nowrap;">${a.aufwand_stunden ? a.aufwand_stunden+'h' : '–'}</td>
+                    <td style="padding:3px 6px;width:16px;text-align:center;">${isReturned ? `<span
+                        onclick="event.stopPropagation();_tpReturnedIds.delete(${a.id});renderTpListe();"
+                        title="Freigeben"
+                        style="color:#ef4444;font-size:13px;cursor:pointer;line-height:1;">×</span>` : ''}</td>
+                </tr>`;
+            }).join('');
+
+            container.innerHTML = `<table style="width:100%; border-collapse:collapse; font-size:13px;">
+                <thead><tr style="background:#dde0e5; font-size:11px; text-transform:uppercase; position:sticky; top:0; z-index:1;">
+                    <th style="padding:6px 10px; text-align:left; font-weight:600; color:var(--text-gray);">Status</th>
+                    
+                    <th style="padding:6px 6px; text-align:left; font-weight:600; color:var(--text-gray);">Datum</th>
+                    <th style="padding:6px 6px; text-align:left; font-weight:600; color:var(--text-gray);">Filiale</th>
+                    <th style="padding:6px 6px; text-align:left; font-weight:600; color:var(--text-gray);">Ort</th>
+                    <th style="padding:6px 6px; text-align:left; font-weight:600; color:var(--text-gray);">PLZ</th>
+                    <th style="padding:6px 6px; text-align:left; font-weight:600; color:var(--text-gray);">Ausführung</th>
+                    <th style="padding:6px 6px; text-align:left; font-weight:600; color:var(--text-gray);">Aufwand</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+            </table>`;
+        }
+
+
+        // Globale Datumsformatierung TT/MM/YYYY
+        function fmtDate(iso) {
+            if (!iso) return '–';
+            const p = iso.slice(0,10).split('-');
+            if (p.length < 3) return iso;
+            return `${p[2]}/${p[1]}/${p[0]}`;
+        }
+
+        // Gantt Konstanten
+        // Zeitstrahl: Stunden als X-Achse, Start = heute 00:00, 365 Tage vorwärts
+        const TP_HOUR_W  = 60;    // px pro Stunde (15min = 15px)
+        const TP_EC_W    = 110;   // px EC-Spalte
+        const TP_ROW_H   = 28;    // px Zeilenhöhe
+        const TP_DAYS    = 365;   // Gesamtbereich in Tagen
+        const TP_TOTAL_H = TP_DAYS * 24; // Gesamtstunden
+
+        // Startpunkt: heute 00:00 Uhr lokal
+        function tpStartDate() {
+            const d = new Date(); d.setHours(0,0,0,0); return d;
+        }
+        function tpHoursFromISO(iso, startH = 0) {
+            const start = tpStartDate();
+            const d = new Date(iso + 'T00:00:00'); d.setHours(0,0,0,0);
+            return Math.round((d - start) / 3600000) + startH;
+        }
+        function tpISOFromHours(h) {
+            const d = new Date(tpStartDate().getTime() + h * 3600000);
+            const y = d.getFullYear();
+            const m = String(d.getMonth()+1).padStart(2,'0');
+            const day = String(d.getDate()).padStart(2,'0');
+            return `${y}-${m}-${day}`;
+        }
+
+        function renderTpGantt() {
+            const container = document.getElementById('tpPlanungsleiste');
+            const start = tpStartDate();
+            const now = new Date();
+            const nowH = (now - start) / 3600000; // aktuelle Stunde relativ zum Start
+            const totalW = TP_TOTAL_H * TP_HOUR_W;
+
+            // === HEADER: 3 Zeilen – Monat / Datum / Uhrzeit ===
+            let hMonth = '', hDay = '', hHour = '';
+            let curMonth = -1, curMonthStartH = 0;
+
+            for (let day = 0; day < TP_DAYS; day++) {
+                const dayStart = day * 24;
+                const d = new Date(start.getTime() + day * 86400000);
+                const wd = d.getDay();
+                const isToday = day === 0;
+                const isWeekend = wd === 0 || wd === 6;
+                const dayNames = ['So','Mo','Di','Mi','Do','Fr','Sa'];
+                const left = dayStart * TP_HOUR_W;
+                const dayW = 24 * TP_HOUR_W;
+
+                // Monat wechsel
+                if (d.getMonth() !== curMonth) {
+                    if (curMonth !== -1) {
+                        const mW = (dayStart - curMonthStartH) * TP_HOUR_W;
+                        hMonth += `<div style="position:absolute;left:${curMonthStartH*TP_HOUR_W}px;width:${mW}px;
+                            font-size:10px;font-weight:700;color:#444;padding:1px 5px;border-right:2px solid #aaa;
+                            overflow:hidden;white-space:nowrap;background:#dde0e5;">
+                            ${new Date(start.getTime()+curMonthStartH*3600000).toLocaleDateString('de-CH',{month:'long',year:'numeric'})}
+                        </div>`;
+                    }
+                    curMonth = d.getMonth();
+                    curMonthStartH = dayStart;
+                }
+
+                // Tag-Header
+                hDay += `<div style="position:absolute;left:${left}px;width:${dayW}px;height:100%;
+                    border-left:2px solid ${wd===1?'#999':'#d1d5db'};
+                    background:${isToday?'#dbeafe44':isWeekend?'#f3f4f644':'transparent'};
+                    display:flex;align-items:center;justify-content:center;gap:3px;font-size:10px;
+                    color:${isWeekend?'#9ca3af':isToday?'#1d4ed8':'#555'};font-weight:${isToday?'700':'400'};">
+                    ${dayNames[wd]} ${d.getDate()}.${d.getMonth()+1}.
+                </div>`;
+
+                // Nur volle Stunden
+                for (let h = 0; h < 24; h++) {
+                    const qLeft = (dayStart + h) * TP_HOUR_W;
+                    hHour += `<div style="position:absolute;left:${qLeft}px;width:${TP_HOUR_W}px;height:100%;
+                        border-left:1px solid ${h===0?'#bbb':'#ccc'};
+                        box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+                        <span style="font-size:8px;color:#4A5967;font-weight:600;white-space:nowrap;">
+                            ${String(h).padStart(2,'0')}:00</span>
+                    </div>`;
+                }
+            }
+            // Letzter Monat
+            const mW2 = (TP_TOTAL_H - curMonthStartH) * TP_HOUR_W;
+            hMonth += `<div style="position:absolute;left:${curMonthStartH*TP_HOUR_W}px;width:${mW2}px;
+                font-size:10px;font-weight:700;color:#444;padding:1px 5px;overflow:hidden;white-space:nowrap;background:#dde0e5;">
+                ${new Date(start.getTime()+curMonthStartH*3600000).toLocaleDateString('de-CH',{month:'long',year:'numeric'})}
+            </div>`;
+
+            // Jetzt-Linie
+            const nowLine = `<div style="position:absolute;left:${nowH*TP_HOUR_W}px;top:0;bottom:0;width:1px;background:rgba(220,50,50,0.5);z-index:5;pointer-events:none;"></div>`;
+
+            // === EC ZEILEN ===
+            let rows = '';
+            tpECs.forEach((ec, idx) => {
+                const dispoForEc = Object.values(tpDispoMap).filter(d => String(d.ec_id) === String(ec.id));
+
+                let bars = '';
+                dispoForEc.forEach(d => {
+                    const a = tpAllAuftraege.find(x => x.id === d.auftrag_id);
+                    if (!a || !d.einsatzdatum) return;
+                    const sc = STATUS_CONFIG[a.status] || STATUS_CONFIG['KB'];
+                    const ort = (a.einsatzort||'').match(/\d{4}\s+(.+)/)?.[1]?.trim() || '–';
+                    const aufwand = a.aufwand_stunden || 1;
+
+                    // Startzeit aus Dispo (HH:MM) oder default 07:00
+                    let startFrac = 7;
+                    if (d.startzeit) {
+                        const p = d.startzeit.split(':');
+                        startFrac = parseInt(p[0]) + parseInt(p[1]||0)/60;
+                    }
+                    const barLeft = tpHoursFromISO(d.einsatzdatum, startFrac) * TP_HOUR_W;
+                    const barW = Math.max(aufwand * TP_HOUR_W - 4, 20);
+                    if (barLeft < 0 || barLeft > totalW) return;
+
+                    bars += `<div
+                        onmousedown="tpPickupBar(event,${a.id})"
+                        title="${a.projektnummer||''} · ${ort} · ${aufwand}h"
+                        style="position:absolute;left:${barLeft}px;width:${barW}px;
+                            top:2px;height:${TP_ROW_H-5}px;
+                            background:${sc.color}33;border:1.5px solid ${sc.color};border-radius:5px;
+                            cursor:grab;overflow:hidden;display:flex;align-items:center;padding:0 5px;
+                            box-sizing:border-box;user-select:none;z-index:4;">
+                        <div style="flex:1;min-width:0;display:flex;align-items:center;gap:5px;overflow:hidden;">
+                            <span style="font-size:9px;font-weight:700;color:${sc.color};white-space:nowrap;flex-shrink:0;">${(d.startzeit||'--:--').slice(0,5)}–${(d.endzeit||'--:--').slice(0,5)}</span>
+                            <span style="font-size:9px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${a.projektnummer||''} · ${ort}</span>
+                        </div>
+                        <span onclick="tpRemoveFromPlan(${a.id})" style="font-size:10px;color:#aaa;cursor:pointer;flex-shrink:0;">✕</span>
+                    </div>`;
+                });
+
+                // Stunden-Hintergrundgitter + Drop-Zonen (tagesweise)
+                let bgGrid = '';
+                for (let day = 0; day < TP_DAYS; day++) {
+                    const iso = tpISOFromHours(day * 24);
+                    const wd = new Date(iso+'T12:00:00').getDay();
+                    const isWeekend = wd===0||wd===6;
+                    const isToday = day===0;
+                    const left = day * 24 * TP_HOUR_W;
+                    const dayW = 24 * TP_HOUR_W;
+                    bgGrid += `<div data-date="${iso}"
+                            style="position:absolute;left:${left}px;width:${dayW}px;height:100%;
+                            border-left:${wd===1?'2px solid #d1d5db':'1px solid #f0f0f0'};
+                            background:${isToday?'#eff6ff55':isWeekend?'#f9fafb88':'transparent'};
+                        background-image:
+                            repeating-linear-gradient(90deg,
+                                transparent 0px,
+                                transparent 14px,
+                                #f8f8f8 14px, #f8f8f8 15px,
+                                transparent 15px,
+                                transparent 29px,
+                                #f2f2f2 29px, #f2f2f2 30px,
+                                transparent 30px,
+                                transparent 44px,
+                                #f8f8f8 44px, #f8f8f8 45px,
+                                transparent 45px,
+                                transparent 59px,
+                                #e8e8e8 59px, #e8e8e8 60px
+                            );"></div>`;
+                }
+
+                rows += `<div style="display:flex;border-top:2px solid #d1d5db;
+                    ${idx%2===1?'background:#f9fafb;':'background:white;'}height:${TP_ROW_H}px;">
+                    <div style="width:${TP_EC_W}px;min-width:${TP_EC_W}px;padding:6px 10px;
+                        border-right:1px solid var(--border);font-size:12px;font-weight:600;
+                        display:flex;flex-direction:column;justify-content:center;
+                        position:sticky;left:0;z-index:3;background:inherit;">
+                        <span>${ec.vorname} ${ec.nachname}</span>
+                    </div>
+                    <div data-ecid="${ec.id}" style="position:relative;width:${totalW}px;height:${TP_ROW_H}px;overflow:visible;flex-shrink:0;">
+                        ${bgGrid}
+                        ${nowLine}
+                        ${bars}
+                    </div>
+                </div>`;
+            });
+
+            container.innerHTML = `
+                <div style="display:flex;position:sticky;top:0;z-index:10;background:#dde0e5;border-bottom:2px solid #aaa;">
+                    <div style="width:${TP_EC_W}px;min-width:${TP_EC_W}px;padding:6px 10px;font-size:11px;
+                        font-weight:700;text-transform:uppercase;color:var(--text-gray);
+                        border-right:1px solid var(--border);position:sticky;left:0;z-index:11;background:#dde0e5;">EC</div>
+                    <div style="position:relative;width:${totalW}px;flex-shrink:0;">
+                        <div style="position:relative;height:14px;background:#c8cdd4;border-bottom:1px solid #aaa;">${hMonth}</div>
+                        <div style="position:relative;height:20px;background:#dde0e5;border-bottom:1px solid #bbb;">${hDay}</div>
+                        <div style="position:relative;height:16px;background:#eaecef;border-bottom:2px solid #aaa;">${hHour}</div>
+                    </div>
+                </div>
+                ${rows}`;
+
+            // Scroll-Position beibehalten, nur beim ersten Laden zu jetzt springen
+            requestAnimationFrame(() => {
+                const scrollEl = document.getElementById('tpGanttScroll');
+                if (!scrollEl) return;
+                if (scrollEl.dataset.initialized !== '1') {
+                    const nowLeft = TP_EC_W + nowH * TP_HOUR_W - 80;
+                    scrollEl.scrollLeft = Math.max(0, nowLeft);
+                    scrollEl.dataset.initialized = '1';
+                }
+            });
+        }
+
+        function tpBarDragStart(event, auftragId, fromDate, startFrac) {
+            tpDragAuftragId = auftragId;
+            tpDragOffsetPct = 0;
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', String(auftragId));
+        }
+
+        function tpDragStart(event, auftragId) {
+            tpDragAuftragId = auftragId;
+            tpDragOffsetPct = 0;
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', String(auftragId));
+
+            // Custom Drag-Ghost: Balken in Aufwandslänge + Statusfarbe
+            const a = tpAllAuftraege.find(x => x.id === auftragId);
+            if (a) {
+                const sc = STATUS_CONFIG[a.status] || STATUS_CONFIG['KB'];
+                const aufwand = a.aufwand_stunden || 1;
+                const barW = Math.max(aufwand * TP_HOUR_W, 40);
+                const ort = (a.einsatzort||'').match(/\d{4}\s+(.+)/)?.[1]?.trim() || '–';
+
+                const ghost = document.createElement('div');
+                ghost.style.cssText = `
+                    position:fixed; top:-200px; left:0;
+                    width:${barW}px; height:22px;
+                    background:${sc.color}33;
+                    border:1.5px solid ${sc.color};
+                    border-radius:5px;
+                    display:flex; align-items:center; padding:0 6px;
+                    font-size:10px; font-weight:700; color:${sc.color};
+                    white-space:nowrap; overflow:hidden;
+                    pointer-events:none; z-index:9999;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+                `;
+                ghost.textContent = `${a.id} · ${ort} · ${aufwand}h`;
+                document.body.appendChild(ghost);
+                event.dataTransfer.setDragImage(ghost, barW / 2, 11);
+                setTimeout(() => ghost.remove(), 0);
+            }
+        }
+
+        async function tpTimeDrop(event, dateISO, ecId, cell) {
+            event.preventDefault();
+            cell.style.background = '';
+            const auftragId = tpDragAuftragId;
+            if (!auftragId) return;
+            const a = tpAllAuftraege.find(x => x.id === auftragId);
+            if (!a) return;
+
+            // Klickposition → Stunde innerhalb des Tages
+            const rect = cell.getBoundingClientRect();
+            const relX = event.clientX - rect.left;
+            let startH = Math.round((relX / TP_HOUR_W) * 4) / 4; // 15min Raster
+            startH = Math.max(0, Math.min(23, startH));
+            const endH = Math.min(24, startH + (a.aufwand_stunden || 1));
+            const toTime = h => `${String(Math.floor(h)).padStart(2,'0')}:${String(Math.round((h%1)*60)).padStart(2,'0')}`;
+
+            // 10h Check
+            const existing = Object.values(tpDispoMap).filter(d =>
+                String(d.ec_id) === String(ecId) && d.einsatzdatum === dateISO && d.auftrag_id !== auftragId
+            );
+            const currentH = existing.reduce((sum, d) => {
+                const ax = tpAllAuftraege.find(x => x.id === d.auftrag_id);
+                return sum + (ax?.aufwand_stunden || 0);
+            }, 0);
+            const newTotal = currentH + (a.aufwand_stunden || 0);
+            if (newTotal > 10) {
+                const confirmed = await tpWarnDialog(a, newTotal, Math.ceil(newTotal/10));
+                if (!confirmed) return;
+            }
+
+            try {
+                const { data, error } = await supabaseClient.rpc('upsert_dispo_einsatz', {
+                    p_session_token: sessionToken,
+                    p_auftrag_id: auftragId,
+                    p_ec_id: ecId,
+                    p_einsatzdatum: dateISO,
+                    p_startzeit: toTime(startH),
+                    p_endzeit: toTime(endH),
+                    p_infos_ec: tpDispoMap[auftragId]?.infos_ec || null
+                });
+                if (error || data?.error) throw new Error(data?.error || error?.message);
+                tpDispoMap[auftragId] = { auftrag_id: auftragId, ec_id: ecId, einsatzdatum: dateISO,
+                    startzeit: toTime(startH), endzeit: toTime(endH) };
+                renderTagesprogramm();
+            } catch(err) { alert('❌ ' + err.message); }
+        }
+
+        async function tpDayDrop(event, dateISO, ecId) { return tpTimeDrop(event, dateISO, ecId, event.currentTarget); }
+        async function tpGanttDrop(event, ecId, dateISO, rowEl) { return tpTimeDrop(event, dateISO, ecId, event.currentTarget); }
+        async function tpDrop(event, ecId, dateISO) { return tpTimeDrop(event, dateISO, ecId, event.currentTarget); }
+
+        function tpBarDragStart(event, auftragId, fromDate) {
+            tpDragAuftragId = auftragId;
+            tpDragOffsetPct = 0;
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', String(auftragId));
+        }
+
+        function tpDragStart(event, auftragId) {
+            tpDragAuftragId = auftragId;
+            tpDragOffsetPct = 0;
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', String(auftragId));
+        }
+
+        async function tpDayDrop(event, dateISO, ecId) {
+            event.preventDefault();
+            event.currentTarget.style.background = '';
+            const auftragId = tpDragAuftragId;
+            if (!auftragId) return;
+            const a = tpAllAuftraege.find(x => x.id === auftragId);
+            if (!a) return;
+
+            // Aufwand-Check
+            const existing = Object.values(tpDispoMap).filter(d =>
+                String(d.ec_id) === String(ecId) && d.einsatzdatum === dateISO && d.auftrag_id !== auftragId
+            );
+            const currentH = existing.reduce((sum, d) => {
+                const ax = tpAllAuftraege.find(x => x.id === d.auftrag_id);
+                return sum + (ax?.aufwand_stunden || 0);
+            }, 0);
+            const newTotal = currentH + (a.aufwand_stunden || 0);
+
+            if (newTotal > 10) {
+                const confirmed = await tpWarnDialog(a, newTotal, Math.ceil(newTotal/10));
+                if (!confirmed) return;
+            }
+
+            try {
+                const { data, error } = await supabaseClient.rpc('upsert_dispo_einsatz', {
+                    p_session_token: sessionToken,
+                    p_auftrag_id: auftragId,
+                    p_ec_id: ecId,
+                    p_einsatzdatum: dateISO,
+                    p_startzeit: null,
+                    p_endzeit: null,
+                    p_infos_ec: tpDispoMap[auftragId]?.infos_ec || null
+                });
+                if (error || data?.error) throw new Error(data?.error || error?.message);
+                tpDispoMap[auftragId] = { auftrag_id: auftragId, ec_id: ecId, einsatzdatum: dateISO };
+                renderTagesprogramm();
+            } catch (err) {
+                alert('❌ Fehler: ' + err.message);
+            }
+        }
+
+        async function tpGanttDrop(event, ecId, dateISO, rowEl) {
+            return tpDayDrop(event, dateISO, ecId);
+        }
+        async function tpDrop(event, ecId, dateISO) {
+            return tpDayDrop(event, dateISO, ecId);
+        }
+
+
+        function tpWarnDialog(auftrag, totalH, splits) {
+            return new Promise(resolve => {
+                const ort = (auftrag.einsatzort||'').match(/\d{4}\s+(.+)/)?.[1]?.trim() || auftrag.einsatzort || '–';
+                const origH = auftrag.aufwand_stunden || 0;
+                const dupH = Math.max(1, origH - Math.floor(origH / 2));
+                const origHSplit = origH - dupH;
+
+                const d = document.createElement('div');
+                d.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;';
+                d.innerHTML = `
+                    <div style="background:white;border-radius:16px;padding:32px;max-width:500px;width:95%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+                        <div style="font-size:36px;text-align:center;margin-bottom:12px;">⚠️</div>
+                        <h3 style="margin:0 0 8px;text-align:center;color:#ef4444;">Aufwand überschreitet 10h!</h3>
+                        <p style="color:var(--text-gray);font-size:14px;text-align:center;margin-bottom:20px;">
+                            <strong>${auftrag.id}</strong> · ${ort} · Total geplant: <strong>${totalH}h</strong>
+                        </p>
+
+                        <!-- Split-Option -->
+                        <div id="tpSplitSection" style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:16px;margin-bottom:20px;">
+                            <div style="font-weight:600;font-size:14px;margin-bottom:12px;color:#92400e;">✂️ Auftrag aufteilen (empfohlen)</div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                                <div>
+                                    <label style="font-size:12px;font-weight:600;color:var(--text-gray);display:block;margin-bottom:4px;">AUFTRAG ${auftrag.id} (Original)</label>
+                                    <div style="display:flex;align-items:center;gap:6px;">
+                                        <input type="number" id="tpSplitOrig" min="1" max="${origH - 1}" value="${origHSplit}"
+                                            style="width:70px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:14px;text-align:center;"
+                                            oninput="document.getElementById('tpSplitDup').value = Math.max(1, ${origH} - this.value); tpUpdateSplitTotal();">
+                                        <span style="font-size:13px;">h</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label style="font-size:12px;font-weight:600;color:var(--text-gray);display:block;margin-bottom:4px;">DUPLIKAT (bleibt in Liste)</label>
+                                    <div style="display:flex;align-items:center;gap:6px;">
+                                        <input type="number" id="tpSplitDup" min="1" max="${origH - 1}" value="${dupH}"
+                                            style="width:70px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:14px;text-align:center;"
+                                            oninput="document.getElementById('tpSplitOrig').value = Math.max(1, ${origH} - this.value); tpUpdateSplitTotal();">
+                                        <span style="font-size:13px;">h</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="tpSplitTotal" style="margin-top:10px;font-size:12px;color:var(--text-gray);text-align:center;">
+                                Total: ${origH}h / ${origH}h ✓
+                            </div>
+                            <button id="tpBtnSplit"
+                                onclick="tpDoSplit(${auftrag.id}, ${origH})"
+                                style="width:100%;margin-top:12px;padding:10px;background:#f59e0b;color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;">
+                                Aufteilen & einplanen
+                            </button>
+                        </div>
+
+                        <!-- Aktionen -->
+                        <div style="display:flex;gap:10px;">
+                            <button onclick="document.getElementById('tpWarnOverlay').remove(); window._tpWarnResolve(false);"
+                                style="flex:1;padding:10px;border:1px solid var(--border);border-radius:8px;cursor:pointer;background:white;font-size:13px;">
+                                Abbrechen
+                            </button>
+                            <button onclick="document.getElementById('tpWarnOverlay').remove(); window._tpWarnResolve(true);"
+                                style="flex:1;padding:10px;background:#ef4444;color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;">
+                                Trotzdem einplanen
+                            </button>
+                        </div>
+                    </div>`;
+                d.id = 'tpWarnOverlay';
+                window._tpWarnResolve = resolve;
+                document.body.appendChild(d);
+            });
+        }
+
+
+
+        // ============================================================
+        // DRAG SYSTEM – vollständig neu
+        // ============================================================
+        let _drag = {
+            active: false,
+            auftragId: null,
+            floatEl: null,
+            previewEl: null,
+            ecId: null,
+            dateISO: null,
+            hour: 0
+        };
+        const _tpReturnedIds = new Set(); // zurückgelegte Aufträge → zuoberst rot
+
+        function tpPickup(event, auftragId) {
+            if (event.button !== 0) return;
+            event.preventDefault();
+            event.stopPropagation();
+
+            const a = tpAllAuftraege.find(x => x.id === auftragId);
+            if (!a) return;
+            const sc = STATUS_CONFIG[a.status] || STATUS_CONFIG['KB'];
+            const aufwand = a.aufwand_stunden || 1;
+            const ort = (a.einsatzort || '').match(/\d{4}\s+(.+)/)?.[1]?.trim() || '–';
+            const barW = Math.max(aufwand * TP_HOUR_W, 40);
+
+            // Floating-Balken
+            const el = document.createElement('div');
+            el.style.cssText = [
+                'position:fixed', 'pointer-events:none', 'z-index:9999',
+                `width:${barW}px`, 'height:22px',
+                `background:${sc.color}44`, `border:2px solid ${sc.color}`,
+                'border-radius:5px', 'display:flex', 'align-items:center',
+                'padding:0 6px', 'font-size:10px', `font-weight:700`, `color:${sc.color}`,
+                'white-space:nowrap', 'overflow:hidden',
+                'box-shadow:0 3px 12px rgba(0,0,0,0.2)',
+                'transform:translate(0,-50%)',
+                `left:${event.clientX}px`, `top:${event.clientY}px`
+            ].join(';');
+            el.textContent = `${a.id} · ${ort} · ${aufwand}h`;
+            document.body.appendChild(el);
+
+            _drag.active = true;
+            _drag.auftragId = auftragId;
+            _drag.floatEl = el;
+            _drag.previewEl = null;
+            _drag.ecId = null;
+            _drag.dateISO = null;
+            _drag.hour = 0;
+
+            _tpBarDragMoved = false;
+            _drag.startX = event.clientX;
+            _drag.startY = event.clientY;
+            document.addEventListener('mousemove', _tpOnMove);
+            document.addEventListener('mouseup',   _tpOnDrop);
+        }
+
+        function _tpOnMove(e) {
+            if (!_drag.active) return;
+            if (!_tpBarDragMoved) {
+                const dx = e.clientX - (_drag.startX || e.clientX);
+                const dy = e.clientY - (_drag.startY || e.clientY);
+                if (Math.sqrt(dx*dx + dy*dy) > 4) _tpBarDragMoved = true;
+                else return; // noch kein echter Drag
+            }
+
+            // Float folgt Maus
+            _drag.floatEl.style.left = e.clientX + 'px';
+            _drag.floatEl.style.top  = e.clientY + 'px';
+
+            // Gantt-Bereich prüfen
+            const gs = document.getElementById('tpGanttScroll');
+            if (!gs) return;
+            const gr = gs.getBoundingClientRect();
+
+            const inGantt = e.clientX >= gr.left && e.clientX <= gr.right &&
+                            e.clientY >= gr.top  && e.clientY <= gr.bottom;
+
+            // Auftragsliste rot wenn Drag drüber
+            const listEl2 = document.getElementById('tpAuftragListe');
+            const listRect2 = listEl2?.getBoundingClientRect();
+            const overList2 = listRect2 && e.clientX >= listRect2.left && e.clientX <= listRect2.right &&
+                              e.clientY >= listRect2.top && e.clientY <= listRect2.bottom;
+            if (listEl2) listEl2.style.background = overList2 ? '#fee2e2' : '';
+
+            // Über Liste: Drop-Ziel löschen
+            if (overList2) {
+                _drag.ecId = null;
+                _drag.dateISO = null;
+                if (_drag.previewEl) _drag.previewEl.style.display = 'none';
+                return;
+            }
+
+            if (!inGantt) {
+                _drag.ecId = null;
+                _drag.dateISO = null;
+                if (_drag.previewEl) _drag.previewEl.style.display = 'none';
+                return;
+            }
+
+            // EC-Zeile
+            const HEADER_H = 52;
+            const relY  = e.clientY - gr.top;
+            const ecIdx = Math.floor((relY - HEADER_H) / TP_ROW_H);
+            if (ecIdx < 0 || ecIdx >= tpECs.length) {
+                _drag.ecId = null;
+                if (_drag.previewEl) _drag.previewEl.style.display = 'none';
+                return;
+            }
+
+            // Stunde
+            const relX  = e.clientX - gr.left + gs.scrollLeft - TP_EC_W;
+            const startH = Math.max(0, Math.round((relX / TP_HOUR_W) * 4) / 4);
+            const dayIdx  = Math.floor(startH / 24);
+            const hourOfDay = startH % 24;
+
+            // Speichern
+            _drag.ecId    = tpECs[ecIdx].id;
+            _drag.dateISO = tpISOFromHours(dayIdx * 24);
+            _drag.hour    = hourOfDay;
+
+            // Preview-Balken
+            const a  = tpAllAuftraege.find(x => x.id === _drag.auftragId);
+            const sc = STATUS_CONFIG[a?.status] || STATUS_CONFIG['KB'];
+            const aufwand = a?.aufwand_stunden || 1;
+            const barW = Math.max(aufwand * TP_HOUR_W, 40);
+            const barLeft = gr.left + TP_EC_W + startH * TP_HOUR_W - gs.scrollLeft;
+            const barTop  = gr.top  + HEADER_H + ecIdx * TP_ROW_H + 3;
+
+            if (!_drag.previewEl) {
+                const p = document.createElement('div');
+                p.style.cssText = [
+                    'position:fixed', 'pointer-events:none', 'z-index:9998',
+                    'border-radius:5px', 'border:2px dashed',
+                    'display:flex', 'align-items:center',
+                    'padding:0 4px', 'font-size:9px', 'font-weight:600',
+                    'white-space:nowrap', 'overflow:hidden'
+                ].join(';');
+                document.body.appendChild(p);
+                _drag.previewEl = p;
+            }
+            const p = _drag.previewEl;
+            p.style.display  = 'flex';
+            p.style.left     = barLeft + 'px';
+            p.style.top      = barTop  + 'px';
+            p.style.width    = barW + 'px';
+            p.style.height   = (TP_ROW_H - 5) + 'px';
+            p.style.background   = sc.color + '22';
+            p.style.borderColor  = sc.color;
+            p.style.color        = sc.color;
+            p.textContent = aufwand + 'h';
+        }
+
+        async function _tpOnDrop(e) {
+            document.removeEventListener('mousemove', _tpOnMove);
+            document.removeEventListener('mouseup',   _tpOnDrop);
+
+            if (_drag.floatEl)   { _drag.floatEl.remove();   _drag.floatEl = null; }
+            if (_drag.previewEl) { _drag.previewEl.remove(); _drag.previewEl = null; }
+            const listElReset = document.getElementById('tpAuftragListe');
+            if (listElReset) listElReset.style.background = '';
+
+            if (!_drag.active) return;
+            _drag.active = false;
+
+            // Kein Drag-Move = Klick → Dialog öffnen falls Balken-Auftrag
+            if (!_tpBarDragMoved && tpDispoMap[_drag.auftragId]) {
+                tpOpenBarDialog(_drag.auftragId);
+                return;
+            }
+
+            if (!_drag.ecId || !_drag.dateISO) return;
+
+            const a = tpAllAuftraege.find(x => x.id === _drag.auftragId);
+            if (!a) return;
+
+            const aufwand = a.aufwand_stunden || 1;
+            const hourOfDay = _drag.hour;
+            const dateISO   = _drag.dateISO;
+            const ecId      = _drag.ecId;
+            const toTime = h => String(Math.floor(h)).padStart(2,'0') + ':' + String(Math.round((h%1)*60)).padStart(2,'0');
+            const startzeit = toTime(hourOfDay);
+            const endzeit   = toTime(Math.min(24, hourOfDay + aufwand));
+
+            // 10h Check
+            const dayTotal = Object.values(tpDispoMap)
+                .filter(d => String(d.ec_id) === String(ecId) && d.einsatzdatum === dateISO && d.auftrag_id !== a.id)
+                .reduce((s, d) => s + (tpAllAuftraege.find(x => x.id === d.auftrag_id)?.aufwand_stunden || 0), 0);
+
+            if (dayTotal + aufwand > 10) {
+                const ok = await tpWarnDialog(a, dayTotal + aufwand, Math.ceil((dayTotal + aufwand) / 10));
+                if (!ok) return;
+            }
+
+            // Sofort lokal einsetzen
+            tpDispoMap[a.id] = { auftrag_id: a.id, ec_id: ecId, einsatzdatum: dateISO, startzeit, endzeit };
+            renderTagesprogramm();
+
+            // Zum Balken scrollen
+            const gs2 = document.getElementById('tpGanttScroll');
+            if (gs2) gs2.scrollLeft = Math.max(0, TP_EC_W + tpHoursFromISO(dateISO, hourOfDay) * TP_HOUR_W - gs2.clientWidth / 2);
+
+            // DB speichern
+            supabaseClient.rpc('upsert_dispo_einsatz', {
+                p_session_token: sessionToken,
+                p_auftrag_id: a.id,
+                p_ec_id: ecId,
+                p_einsatzdatum: dateISO,
+                p_startzeit: startzeit,
+                p_endzeit: endzeit,
+                p_infos_ec: null
+            }).then(({ data, error }) => {
+                if (error || data?.error) {
+                    delete tpDispoMap[a.id];
+                    renderTagesprogramm();
+                    alert('❌ ' + (data?.error || error?.message));
+                }
+            });
+        }
+
+        // Balken im Gantt verschieben
+        // Balken im Gantt verschieben
+        function tpPickupBar(event, auftragId) {
+            if (event.button !== 0) return;
+            event.preventDefault();
+            event.stopPropagation();
+
+            // Alten Eintrag merken – Balken bleibt sichtbar während Drag
+            const prevDispo = tpDispoMap[auftragId];
+
+            // Normales Pickup
+            tpPickup(event, auftragId);
+
+            // Drop überwachen: falls kein Ziel → wiederherstellen
+            const origDrop = _tpOnDrop;
+            document.removeEventListener('mouseup', _tpOnDrop);
+            const guardedDrop = async (e) => {
+                document.removeEventListener('mouseup', guardedDrop);
+                document.removeEventListener('mousemove', _tpOnMove);
+                if (_drag.floatEl)   { _drag.floatEl.remove();   _drag.floatEl = null; }
+                if (_drag.previewEl) { _drag.previewEl.remove(); _drag.previewEl = null; }
+                if (!_drag.active)   return;
+                _drag.active = false;
+
+                // Klick (keine Bewegung) → Dialog öffnen
+                if (!_tpBarDragMoved && tpDispoMap[auftragId]) {
+                    tpOpenBarDialog(auftragId);
+                    return;
+                }
+
+                // Prüfen ob über Auftragsliste losgelassen
+                const listEl = document.getElementById('tpAuftragListe');
+                if (listEl) listEl.style.background = '';
+                const listRect = listEl?.getBoundingClientRect();
+                const overList = listRect && e.clientX >= listRect.left && e.clientX <= listRect.right &&
+                                 e.clientY >= listRect.top && e.clientY <= listRect.bottom;
+
+                if (overList) {
+                    // Sofort zurück in Liste – rot markiert als "muss verplant/freigegeben werden"
+                    _tpReturnedIds.add(auftragId);
+                    delete tpDispoMap[auftragId];
+                    renderTagesprogramm();
+                    supabaseClient.from('dispo_einsaetze')
+                        .delete().eq('auftrag_id', auftragId).then(({ error }) => {
+                            if (error) {
+                                if (prevDispo) tpDispoMap[auftragId] = prevDispo;
+                                _tpReturnedIds.delete(auftragId);
+                                renderTagesprogramm();
+                                alert('❌ ' + error.message);
+                            }
+                        });
+                } else if (_drag.ecId && _drag.dateISO) {
+                    // Neu platzieren
+                    const a = tpAllAuftraege.find(x => x.id === auftragId);
+                    if (!a) return;
+                    const aufwand = a.aufwand_stunden || 1;
+                    const toTime = h => String(Math.floor(h)).padStart(2,'0') + ':' + String(Math.round((h%1)*60)).padStart(2,'0');
+                    const startzeit = toTime(_drag.hour);
+                    const endzeit   = toTime(Math.min(24, _drag.hour + aufwand));
+                    tpDispoMap[auftragId] = { auftrag_id: auftragId, ec_id: _drag.ecId, einsatzdatum: _drag.dateISO, startzeit, endzeit };
+                    renderTagesprogramm();
+                    const gs = document.getElementById('tpGanttScroll');
+                    if (gs) gs.scrollLeft = Math.max(0, TP_EC_W + tpHoursFromISO(_drag.dateISO, _drag.hour) * TP_HOUR_W - gs.clientWidth / 2);
+                    supabaseClient.rpc('upsert_dispo_einsatz', {
+                        p_session_token: sessionToken, p_auftrag_id: auftragId,
+                        p_ec_id: _drag.ecId, p_einsatzdatum: _drag.dateISO,
+                        p_startzeit: startzeit, p_endzeit: endzeit, p_infos_ec: null
+                    }).then(({ data, error }) => {
+                        if (error || data?.error) {
+                            tpDispoMap[auftragId] = prevDispo;
+                            renderTagesprogramm();
+                            alert('❌ ' + (data?.error || error?.message));
+                        }
+                    });
+                } else if (!overList) {
+                    // Kein Ziel → zurück
+                    if (prevDispo) tpDispoMap[auftragId] = prevDispo;
+                    renderTagesprogramm();
+                }
+            };
+            document.addEventListener('mouseup', guardedDrop);
+        }
+
+        // Stubs für alte Referenzen
+
+        // ============================================================
+        // TAGESPROGRAMM BAR DIALOG
+        // ============================================================
+        let _tpBarEditId = null;
+        let _tpBarDragMoved = false;
+
+        function tpOpenBarDialog(auftragId) {
+            // Nur öffnen wenn kein Drag stattgefunden hat
+            if (_tpBarDragMoved) return;
+
+            const a = tpAllAuftraege.find(x => x.id === auftragId);
+            const d = tpDispoMap[auftragId];
+            if (!a || !d) return;
+            _tpBarEditId = auftragId;
+
+            const sc = STATUS_CONFIG[a.status] || STATUS_CONFIG['KB'];
+            const ort = (a.einsatzort||'').match(/\d{4}\s+(.+)/)?.[1]?.trim() || a.einsatzort || '–';
+            document.getElementById('tpBarDialogTitle').textContent = 'Einsatz bearbeiten';
+            const ecName = tpECs.find(e => String(e.id) === String(d.ec_id));
+            const ecLabel = ecName ? `${ecName.vorname} ${ecName.nachname}` : '–';
+            const plz = (a.einsatzort||'').match(/(\d{4})/)?.[1] || '';
+            document.getElementById('tpBarDialogHeader').innerHTML = [
+                `<span><strong>${fmtDate(d.einsatzdatum)}</strong></span>`,
+                `<span>|</span>`,
+                `<span>${(d.startzeit||'--:--').slice(0,5)} – ${(d.endzeit||'--:--').slice(0,5)}</span>`,
+                `<span>|</span>`,
+                `<span>${a.projektnummer||'–'}</span>`,
+                `<span>|</span>`,
+                `<span>${plz} ${ort}</span>`,
+                `<span>|</span>`,
+                `<span>${ecLabel}</span>`
+            ].join(' ');
+            document.getElementById('tpBarDialogInfo').innerHTML =
+                `<span style="color:${sc.color};font-weight:700;">${sc.label}</span> &nbsp;·&nbsp; ${a.aufwand_stunden||'?'}h Aufwand &nbsp;·&nbsp; ${a.filiale||''} &nbsp;·&nbsp; ${a.ausfuehrungsart?.join(', ')||''}`;
+
+            // EC Dropdown befüllen
+            const ecSel = document.getElementById('tpBarEc');
+            ecSel.innerHTML = tpECs.map(ec =>
+                `<option value="${ec.id}" ${String(ec.id)===String(d.ec_id)?'selected':''}>${ec.vorname} ${ec.nachname}</option>`
+            ).join('');
+
+            // Datum
+            document.getElementById('tpBarDatum').value = d.einsatzdatum || '';
+
+            // Zeiten
+            const parseT = t => { const p=(t||'').split(':'); return [parseInt(p[0])||0, parseInt(p[1])||0]; };
+            const [sh,sm] = parseT(d.startzeit);
+            const [eh,em] = parseT(d.endzeit);
+            document.getElementById('tpBarStartH').value = sh;
+            document.getElementById('tpBarStartM').value = sm;
+            document.getElementById('tpBarEndH').value   = eh;
+            document.getElementById('tpBarEndM').value   = em;
+
+            // Infos
+            document.getElementById('tpBarInfos').value = d.infos_ec || '';
+
+            document.getElementById('tpBarDialog').style.display = 'flex';
+        }
+
+        function tpCloseBarDialog() {
+            document.getElementById('tpBarDialog').style.display = 'none';
+            _tpBarEditId = null;
+        }
+
+        async function tpSaveBarDialog() {
+            const auftragId = _tpBarEditId;
+            if (!auftragId) return;
+            const ecId    = parseInt(document.getElementById('tpBarEc').value);
+            const datum   = document.getElementById('tpBarDatum').value;
+            const sh = String(parseInt(document.getElementById('tpBarStartH').value)||0).padStart(2,'0');
+            const sm = String(parseInt(document.getElementById('tpBarStartM').value)||0).padStart(2,'0');
+            const eh = String(parseInt(document.getElementById('tpBarEndH').value)||0).padStart(2,'0');
+            const em = String(parseInt(document.getElementById('tpBarEndM').value)||0).padStart(2,'0');
+            const startzeit = `${sh}:${sm}`;
+            const endzeit   = `${eh}:${em}`;
+            const infosEc   = document.getElementById('tpBarInfos').value.trim() || null;
+
+            tpDispoMap[auftragId] = { auftrag_id: auftragId, ec_id: ecId, einsatzdatum: datum, startzeit, endzeit, infos_ec: infosEc };
+            tpCloseBarDialog();
+            renderTagesprogramm();
+
+            const { data, error } = await supabaseClient.rpc('upsert_dispo_einsatz', {
+                p_session_token: sessionToken,
+                p_auftrag_id: auftragId,
+                p_ec_id: ecId,
+                p_einsatzdatum: datum,
+                p_startzeit: startzeit,
+                p_endzeit: endzeit,
+                p_infos_ec: infosEc
+            });
+            if (error || data?.error) {
+                alert('❌ ' + (data?.error || error?.message));
+                loadTagesprogramm();
+            }
+        }
+
+        function tpFreigeben(auftragId) {
+            _tpReturnedIds.clear();
+            renderTpListe();
+        }
+
+        function tpDragStart(event, auftragId) { tpDragAuftragId = auftragId; }
+        function tpPreviewHide() {}
+        function tpPreviewShow() {}
+        function tpPreviewMove() {}
+
+
+        // Gantt scroll by drag
+        let _tpScrolling = false, _tpScrollX = 0, _tpScrollLeft = 0;
+        function tpScrollStart(e) {
+            if (e.target.closest('[draggable]')) return; // nicht bei Balken-Drag
+            const el = document.getElementById('tpGanttScroll');
+            _tpScrolling = true; _tpScrollX = e.clientX; _tpScrollLeft = el.scrollLeft;
+            el.style.cursor = 'grabbing';
+        }
+        function tpScrollMove(e) {
+            if (!_tpScrolling) return;
+            e.preventDefault();
+            const el = document.getElementById('tpGanttScroll');
+            el.scrollLeft = _tpScrollLeft - (e.clientX - _tpScrollX);
+        }
+        function tpScrollEnd() {
+            _tpScrolling = false;
+            const el = document.getElementById('tpGanttScroll');
+            if (el) el.style.cursor = 'grab';
+        }
+        function tpUpdateSplitTotal() {
+            const orig = parseFloat(document.getElementById('tpSplitOrig')?.value) || 0;
+            const dup = parseFloat(document.getElementById('tpSplitDup')?.value) || 0;
+            const total = orig + dup;
+            const el = document.getElementById('tpSplitTotal');
+            if (!el) return;
+            const ref = parseFloat(document.getElementById('tpSplitOrig')?.max) + 1 || total;
+            const ok = Math.abs(total - ref) < 0.01;
+            el.innerHTML = `Total: ${total}h / ${ref}h ${ok ? '<span style="color:#10b981;">✓</span>' : '<span style="color:#ef4444;">⚠ muss ${ref}h ergeben</span>'}`;
+            document.getElementById('tpBtnSplit').disabled = !ok;
+        }
+
+        async function tpDoSplit(auftragId, origTotal) {
+            const hOrig = parseFloat(document.getElementById('tpSplitOrig').value);
+            const hDup  = parseFloat(document.getElementById('tpSplitDup').value);
+            if (hOrig < 1 || hDup < 1 || Math.abs(hOrig + hDup - origTotal) > 0.01) {
+                alert('Aufwand muss insgesamt ' + origTotal + 'h ergeben.');
+                return;
+            }
+            document.getElementById('tpWarnOverlay').remove();
+            try {
+                const { data, error } = await supabaseClient.rpc('duplicate_auftrag', {
+                    p_session_token: sessionToken,
+                    p_auftrag_id: auftragId,
+                    p_aufwand_original: hOrig,
+                    p_aufwand_duplikat: hDup
+                });
+                if (error || data?.error) throw new Error(data?.error || error?.message);
+                // Original-Aufwand lokal anpassen
+                const a = tpAllAuftraege.find(x => x.id === auftragId);
+                if (a) a.aufwand_stunden = hOrig;
+                // Duplikat neu laden
+                await loadTagesprogramm();
+                // Resolve mit true = Original einplanen (mit reduziertem Aufwand)
+                window._tpWarnResolve(true);
+            } catch (err) {
+                alert('❌ Fehler: ' + err.message);
+                window._tpWarnResolve(false);
+            }
+        }
+
+        // DISPO EINSATZ
+        // ============================================
+        let currentDispoAuftragId = null;
+
+        async function openDispoDialog(auftragId) {
+            currentDispoAuftragId = auftragId;
+            const a = allAuftraege.find(x => x.id === auftragId);
+            if (!a) return;
+
+            // Titel
+            document.getElementById('dispoDialogTitle').textContent = `Disposition – Auftrag ${auftragId}`;
+
+            // Hinweis an Disponent (read-only aus Auftrag)
+            document.getElementById('dispoHinweis').textContent = a.kommentar_fl || '(kein Hinweis erfasst)';
+            document.getElementById('dispoStatus').value = a.status || 'KB';
+
+            // Datum vorbelegen mit Einsatzdatum des Auftrags
+            document.getElementById('dispoDatum').value = a.einsatzdatum || '';
+            if (a.einsatzzeit) { const p=a.einsatzzeit.substring(0,5).split(':'); document.getElementById('dispoStartzeitH').value=p[0]; document.getElementById('dispoStartzeitM').value='00'; }
+            document.getElementById('dispoEndzeitH').value = ''; document.getElementById('dispoEndzeitM').value = '';
+
+            // Infos an EC vorbelegen
+            document.getElementById('dispoInfosEc').value = a.kommentar_ec || '';
+
+            // Befähigte ECs laden (nicht ausgeschlossene)
+            const ausschlussIds = (a.ec_ausschluss_ids || []).map(Number);
+            const { data: ecData } = await supabaseClient
+                .from('v_mitarbeiter_aktiv')
+                .select('id, vorname, nachname')
+                .eq('funktion', 'EC')
+                .eq('aktiv', true)
+                .order('nachname');
+
+            const ecs = (ecData || []).filter(e => !ausschlussIds.includes(e.id));
+            const sel = document.getElementById('dispoEcId');
+            sel.innerHTML = '<option value="">Bitte wählen...</option>' +
+                ecs.map(e => `<option value="${e.id}">${e.vorname} ${e.nachname}</option>`).join('');
+
+            // Bestehende Dispo laden falls vorhanden
+            const { data: dispo } = await supabaseClient
+                .from('dispo_einsaetze')
+                .select('*')
+                .eq('auftrag_id', auftragId)
+                .maybeSingle();
+
+            if (dispo) {
+                sel.value = dispo.ec_id || '';
+                document.getElementById('dispoDatum').value = dispo.einsatzdatum || '';
+                if (dispo.startzeit) { const p=dispo.startzeit.substring(0,5).split(':'); document.getElementById('dispoStartzeitH').value=p[0]; document.getElementById('dispoStartzeitM').value=p[1]; }
+                if (dispo.endzeit) { const p=dispo.endzeit.substring(0,5).split(':'); document.getElementById('dispoEndzeitH').value=p[0]; document.getElementById('dispoEndzeitM').value=p[1]; }
+                document.getElementById('dispoInfosEc').value = dispo.infos_ec || '';
+            }
+
+            document.getElementById('dispoDialog').style.display = 'flex';
+        }
+
+        function closeDispoDialog() {
+            document.getElementById('dispoDialog').style.display = 'none';
+            currentDispoAuftragId = null;
+        }
+
+        async function saveDispoEinsatz() {
+            const ecId = document.getElementById('dispoEcId').value;
+            const datum = document.getElementById('dispoDatum').value;
+            if (!ecId || !datum) {
+                alert('⚠️ Equipenchef und Datum sind Pflichtfelder.');
+                return;
+            }
+
+            try {
+                const newStatus = document.getElementById('dispoStatus').value;
+                const [{ data, error }, statusRes] = await Promise.all([
+                    supabaseClient.rpc('upsert_dispo_einsatz', {
+                        p_session_token: sessionToken,
+                        p_auftrag_id: currentDispoAuftragId,
+                        p_ec_id: parseInt(ecId),
+                        p_einsatzdatum: datum,
+                        p_startzeit: (() => { const h=document.getElementById('dispoStartzeitH').value, m=document.getElementById('dispoStartzeitM').value; return (h&&m) ? h+':'+m : null; })(),
+                        p_endzeit: (() => { const h=document.getElementById('dispoEndzeitH').value, m=document.getElementById('dispoEndzeitM').value; return (h&&m) ? h+':'+m : null; })(),
+                        p_infos_ec: document.getElementById('dispoInfosEc').value || null
+                    }),
+                    supabaseClient.rpc('update_auftrag', {
+                        p_session_token: sessionToken,
+                        p_id: currentDispoAuftragId,
+                        p_status: newStatus
+                    })
+                ]);
+
+                if (error || data?.error) throw new Error(data?.error || error?.message);
+                closeDispoDialog();
                 await loadAuftraege();
             } catch (err) {
                 alert('❌ Fehler: ' + err.message);
@@ -4957,7 +6256,7 @@ TECHNOLOGIE-STACK:
                             <tbody>${data.map(r => `<tr>
                                 <td>${maMap[r.mitarbeiter_id] || r.mitarbeiter_id}</td>
                                 <td><span style="font-weight:600">${r.typ}</span></td>
-                                <td>${r.von}</td><td>${r.bis}</td><td>${r.tage}</td>
+                                <td>${fmtDate(r.von)}</td><td>${fmtDate(r.bis)}</td><td>${r.tage}</td>
                                 <td>${new Date(r.deleted_at).toLocaleString('de-CH')}</td>
                                 <td><button class="btn btn-secondary" style="padding: 4px 12px; font-size: 12px;" onclick="restorePapierkorbEntry('abwesenheiten', ${r.id})">↩ Wiederherstellen</button></td>
                             </tr>`).join('')}</tbody>
@@ -6010,7 +7309,19 @@ TECHNOLOGIE-STACK:
                 }
 
                 // Handle system user
-                if (systemZugang) {
+                if (!systemZugang) {
+                    // Zugang entfernen falls vorhanden
+                    const existingId = document.getElementById('existingSystemUserId').value;
+                    if (existingId) {
+                        const { error } = await supabaseClient
+                            .rpc('delete_system_user', {
+                                p_session_token: sessionToken,
+                                p_id: parseInt(existingId)
+                            });
+                        if (error) throw error;
+                        console.log('✅ System user removed');
+                    }
+                } else if (systemZugang) {
                     const existingUserId = document.getElementById('existingSystemUserId').value;
 
                     const hashedPw = password ? await hashPassword(password) : null;
@@ -7220,6 +8531,30 @@ TECHNOLOGIE-STACK:
     }
     </script>
     
+    <style>
+        #auftragDialog .modal-body input:not([type=file]):not([type=checkbox]),
+        #auftragDialog .modal-body select,
+        #auftragDialog .modal-body textarea,
+        #auftragDialog .modal-body button[id$="Btn"],
+        #auftragDialog .modal-body button[id$="Btn2"] {
+            padding: 6px 10px !important;
+            height: 36px !important;
+            box-sizing: border-box;
+            font-size: 14px !important;
+            border: 1px solid var(--border) !important;
+            border-radius: 8px !important;
+            outline: none;
+        }
+        #auftragDialog .modal-body textarea {
+            height: auto !important;
+            resize: vertical;
+        }
+        #auftragDialog .modal-body input:not([type=file]):not([type=checkbox]):focus,
+        #auftragDialog .modal-body select:focus,
+        #auftragDialog .modal-body textarea:focus {
+            border-color: var(--primary) !important;
+        }
+    </style>
     <!-- Auftrag Dialog -->
     <div id="auftragDialog" class="modal" style="display:none;">
         <div class="modal-overlay" onclick="closeAuftragDialog()"></div>
@@ -7229,61 +8564,25 @@ TECHNOLOGIE-STACK:
                 <button class="modal-close" onclick="closeAuftragDialog()">✕</button>
             </div>
             <div class="modal-body">
-                <div style="background:#fef3c7; border:1px solid #f59e0b; border-radius:8px; padding:12px 16px; margin-bottom:20px; font-size:13px; color:#92400e;">
-                    📄 PDF hochladen um Felder automatisch zu befüllen – danach manuell ergänzen.
-                </div>
-
-                <!-- PDF Upload -->
-                <div style="margin-bottom:20px;">
-                    <label style="display:block; font-weight:600; margin-bottom:8px; font-size:14px;">PDF hochladen</label>
-                    <input type="file" id="auftragPdfInput" accept=".pdf" onchange="extractAuftragFromPdf(event)" style="padding:8px; border:1px solid var(--border); border-radius:8px; width:100%; font-size:14px;">
-                    <div id="pdfExtractStatus" style="margin-top:8px; font-size:13px; color:var(--text-gray);"></div>
-                </div>
-
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
-                    <div class="form-group">
-                        <label>Einsatz-ID *</label>
-                        <input type="number" id="auftragId" placeholder="z.B. 36167" required>
+                <div style="display:grid; grid-template-columns:repeat(8,1fr); gap:12px 16px;">
+                    <!-- Zeile 1: PDF(50%) | Projektnummer(25%) | Einsatz-ID(25%) -->
+                    <div class="form-group" style="grid-column:span 4;">
+                        <label>PDF hochladen</label>
+                        <input type="file" id="auftragPdfInput" accept=".pdf" onchange="extractAuftragFromPdf(event)" style="width:auto; padding:6px; border:1px solid var(--border); border-radius:8px; font-size:14px;">
+                        <div id="pdfExtractStatus" style="margin-top:4px; font-size:12px; color:var(--text-gray);"></div>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group" style="grid-column:span 2;">
                         <label>Projektnummer *</label>
                         <input type="text" id="auftragProjektnummer" placeholder="z.B. 12126746" oninput="updateAuftragFiliale()" required>
                     </div>
-                    <div class="form-group">
-                        <label>Einsatzdatum *</label>
-                        <input type="date" id="auftragDatum" required>
+                    <div class="form-group" style="grid-column:span 2;">
+                        <label>Einsatz-ID *</label>
+                        <input type="number" id="auftragId" placeholder="z.B. 36167" required>
                     </div>
-                    <div class="form-group">
-                        <label>Uhrzeit</label>
-                        <input type="time" id="auftragZeit">
-                    </div>
-                    <div class="form-group" style="grid-column:1/-1;">
-                        <label>Einsatzort</label>
-                        <input type="text" id="auftragOrt" placeholder="z.B. Kesslerplatz 6, 8952 Schlieren">
-                    </div>
-                    <div class="form-group">
-                        <label>Untergrund</label>
-                        <input type="text" id="auftragUntergrund" placeholder="z.B. Beton, Asphalt">
-                    </div>
-                    <div class="form-group">
-                        <label>Filiale (auto)</label>
-                        <input type="text" id="auftragFiliale" readonly style="background:#f9fafb; color:var(--text-gray);">
-                    </div>
-                    <div class="form-group">
-                        <label>Anzahl EC</label>
-                        <input type="number" id="auftragAnzahlEc" value="1" min="1">
-                    </div>
-                    <div class="form-group">
-                        <label>Anzahl MA</label>
-                        <input type="number" id="auftragAnzahlMa" value="1" min="0">
-                    </div>
-                    <div class="form-group">
-                        <label>Aufwand (Stunden)</label>
-                        <input type="number" id="auftragAufwand" placeholder="z.B. 24" step="0.5" min="0">
-                    </div>
-                    <div class="form-group">
+                    <!-- Zeile 2: Status(50%) | Datum(25%) | Uhrzeit(25%) -->
+                    <div class="form-group" style="grid-column:span 4;">
                         <label>Status</label>
-                        <select id="auftragStatus">
+                        <select id="auftragStatus" style="width:100%;">
                             <option value="KB">KB – Kommt Bescheid</option>
                             <option value="AN">AN – Anrufen</option>
                             <option value="RES">RES – Reserviert</option>
@@ -7291,7 +8590,77 @@ TECHNOLOGIE-STACK:
                             <option value="FIX">FIX – Fix verplant</option>
                         </select>
                     </div>
-                    <div class="form-group" style="grid-column:1/-1;">
+                    <div class="form-group" style="grid-column:span 2;">
+                        <label>Einsatzdatum *</label>
+                        <input type="date" id="auftragDatum" required>
+                    </div>
+                    <div class="form-group" style="grid-column:span 2;">
+                        <label>Uhrzeit</label>
+                        <input type="time" id="auftragZeit">
+                    </div>
+                    <!-- Zeile 3: Einsatzort 100% -->
+                    <div class="form-group" style="grid-column:span 8;">
+                        <label>Einsatzort</label>
+                        <input type="text" id="auftragOrt" placeholder="z.B. Kesslerplatz 6, 8952 Schlieren">
+                    </div>
+                    <!-- Zeile 4: Untergrund(50%) | Filiale(25%) | Ausführungsart(25%) -->
+                    <div class="form-group" style="grid-column:span 4;">
+                        <label>Untergrund</label>
+                        <div id="untergrundDropdownWrapper" style="position:relative;">
+                            <button type="button" id="untergrundBtn" onclick="toggleUntergrundDropdown(event)" style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:white; cursor:pointer; display:flex; align-items:center; justify-content:space-between; text-align:left;">
+                                <span id="untergrundLabel">Bitte wählen...</span>
+                                <span>▾</span>
+                            </button>
+                            <div id="untergrundContainer" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:1000; background:white; border:1px solid var(--border); border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,0.12); max-height:260px; overflow-y:auto; margin-top:4px; padding:8px 0;">
+                                <div style="padding:6px 12px; cursor:pointer;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">
+                                    <input type="checkbox" value="Neubelag" class="untergrund-cb" id="ucb_Neubelag" onchange="updateUntergrundLabel()" style="width:auto; margin-right:8px; vertical-align:middle; cursor:pointer;">
+                                    <span style="font-size:14px; vertical-align:middle; cursor:pointer;" onclick="document.getElementById('ucb_Neubelag').click()">Neubelag</span>
+                                </div>
+                                <div style="padding:6px 12px; cursor:pointer;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">
+                                    <input type="checkbox" value="Altbelag" class="untergrund-cb" id="ucb_Altbelag" onchange="updateUntergrundLabel()" style="width:auto; margin-right:8px; vertical-align:middle; cursor:pointer;">
+                                    <span style="font-size:14px; vertical-align:middle; cursor:pointer;" onclick="document.getElementById('ucb_Altbelag').click()">Altbelag</span>
+                                </div>
+                                <div style="padding:6px 12px; cursor:pointer;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">
+                                    <input type="checkbox" value="Beton" class="untergrund-cb" id="ucb_Beton" onchange="updateUntergrundLabel()" style="width:auto; margin-right:8px; vertical-align:middle; cursor:pointer;">
+                                    <span style="font-size:14px; vertical-align:middle; cursor:pointer;" onclick="document.getElementById('ucb_Beton').click()">Beton</span>
+                                </div>
+                                <div style="padding:6px 12px; cursor:pointer;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">
+                                    <input type="checkbox" value="Verbundstein" class="untergrund-cb" id="ucb_Verbundstein" onchange="updateUntergrundLabel()" style="width:auto; margin-right:8px; vertical-align:middle; cursor:pointer;">
+                                    <span style="font-size:14px; vertical-align:middle; cursor:pointer;" onclick="document.getElementById('ucb_Verbundstein').click()">Verbundstein</span>
+                                </div>
+                                <div style="padding:6px 12px; cursor:pointer;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">
+                                    <input type="checkbox" value="Flüsterbelag" class="untergrund-cb" id="ucb_Flüsterbelag" onchange="updateUntergrundLabel()" style="width:auto; margin-right:8px; vertical-align:middle; cursor:pointer;">
+                                    <span style="font-size:14px; vertical-align:middle; cursor:pointer;" onclick="document.getElementById('ucb_Flüsterbelag').click()">Flüsterbelag</span>
+                                </div>
+                                <div style="padding:6px 12px; cursor:pointer;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">
+                                    <input type="checkbox" value="Gussasphalt" class="untergrund-cb" id="ucb_Gussasphalt" onchange="updateUntergrundLabel()" style="width:auto; margin-right:8px; vertical-align:middle; cursor:pointer;">
+                                    <span style="font-size:14px; vertical-align:middle; cursor:pointer;" onclick="document.getElementById('ucb_Gussasphalt').click()">Gussasphalt</span>
+                                </div>
+                                <div style="padding:6px 12px; cursor:pointer;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">
+                                    <input type="checkbox" value="Gussasphalt glänzend" class="untergrund-cb" id="ucb_Gussasphalt_glänzend" onchange="updateUntergrundLabel()" style="width:auto; margin-right:8px; vertical-align:middle; cursor:pointer;">
+                                    <span style="font-size:14px; vertical-align:middle; cursor:pointer;" onclick="document.getElementById('ucb_Gussasphalt_glänzend').click()">Gussasphalt glänzend</span>
+                                </div>
+                                <div style="padding:6px 12px; cursor:pointer;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">
+                                    <input type="checkbox" value="Kunststoff" class="untergrund-cb" id="ucb_Kunststoff" onchange="updateUntergrundLabel()" style="width:auto; margin-right:8px; vertical-align:middle; cursor:pointer;">
+                                    <span style="font-size:14px; vertical-align:middle; cursor:pointer;" onclick="document.getElementById('ucb_Kunststoff').click()">Kunststoff</span>
+                                </div>
+                                <div style="padding:6px 12px; cursor:pointer;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">
+                                    <input type="checkbox" value="Kopfsteinpflaster" class="untergrund-cb" id="ucb_Kopfsteinpflaster" onchange="updateUntergrundLabel()" style="width:auto; margin-right:8px; vertical-align:middle; cursor:pointer;">
+                                    <span style="font-size:14px; vertical-align:middle; cursor:pointer;" onclick="document.getElementById('ucb_Kopfsteinpflaster').click()">Kopfsteinpflaster</span>
+                                </div>
+                                <div style="padding:6px 12px; cursor:pointer;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">
+                                    <input type="checkbox" value="Speziell" class="untergrund-cb" id="ucb_Speziell" onchange="updateUntergrundLabel()" style="width:auto; margin-right:8px; vertical-align:middle; cursor:pointer;">
+                                    <span style="font-size:14px; vertical-align:middle; cursor:pointer;" onclick="document.getElementById('ucb_Speziell').click()">Speziell</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Filiale(25%) | Ausführungsart(25%) -->
+                    <div class="form-group" style="grid-column:span 2;">
+                        <label>Filiale</label>
+                        <input type="text" id="auftragFiliale" readonly style="background:#f9fafb; color:var(--text-gray);">
+                    </div>
+                    <div class="form-group" style="grid-column:span 2;">
                         <label>Ausführungsart</label>
                         <div id="ausfuehrungsartDropdownWrapper" style="position:relative;">
                             <button type="button" id="ausfuehrungsartBtn" onclick="toggleAusfuehrungsartDropdown(event)" style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:white; cursor:pointer; display:flex; align-items:center; justify-content:space-between; text-align:left;">
@@ -7303,50 +8672,75 @@ TECHNOLOGIE-STACK:
                             </div>
                         </div>
                     </div>
-                    <div class="form-group" style="grid-column:1/-1;">
-                        <label>Einsatzbeschreibung</label>
-                        <textarea id="auftragBeschreibung" rows="3" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:8px; font-size:14px; resize:vertical;"></textarea>
+                    <!-- Zeile 5: EC(12.5%) | MA(12.5%) | Aufwand(25%) | leer -->
+                    <div class="form-group" style="grid-column:span 1;">
+                        <label>Anzahl EC</label>
+                        <input type="number" id="auftragAnzahlEc" value="1" min="1">
                     </div>
-                    <div class="form-group" style="grid-column:1/-1;">
-                        <label>Kommentar FL</label>
+                    <div class="form-group" style="grid-column:span 1;">
+                        <label>Anzahl MA</label>
+                        <input type="number" id="auftragAnzahlMa" value="1" min="0">
+                    </div>
+                    <div class="form-group" style="grid-column:span 2;">
+                        <label>Aufwand (Stunden)</label>
+                        <input type="number" id="auftragAufwand" placeholder="z.B. 24" step="0.5" min="0">
+                    </div>
+                    <div></div>
+                    <!-- Zeile 6-8: Textareas 100% -->
+                    <div class="form-group" style="grid-column:span 8;">
+                        <label>Einsatzbeschreibung</label>
+                        <textarea id="auftragBeschreibung" rows="2" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:8px; font-size:14px; resize:vertical;"></textarea>
+                    </div>
+                    <div class="form-group" style="grid-column:span 8;">
+                        <label>Kommentar Disposition</label>
                         <textarea id="auftragKommentarFl" rows="2" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:8px; font-size:14px; resize:vertical;"></textarea>
                     </div>
-                    <div class="form-group" style="grid-column:1/-1;">
+                    <div class="form-group" style="grid-column:span 8;">
                         <label>Kommentar EC</label>
                         <textarea id="auftragKommentarEc" rows="2" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:8px; font-size:14px; resize:vertical;"></textarea>
                     </div>
-
-                    <div style="grid-column:1/-1; padding-top:8px; border-top:1px solid var(--border);">
-                        <h4 style="margin:0 0 12px 0; color:var(--primary);">Ansprechperson Kunde</h4>
+                    <!-- Trennlinie Ansprechperson -->
+                    <div style="grid-column:span 8; padding-top:4px; border-top:1px solid var(--border);">
+                        <h4 style="margin:0 0 4px 0; color:var(--primary); font-size:14px;">Ansprechperson Kunde</h4>
                     </div>
-                    <div class="form-group">
+                    <!-- Zeile: Name(50%) | Tel(25%) | Mail(25%) -->
+                    <div class="form-group" style="grid-column:span 4;">
                         <label>Name</label>
                         <input type="text" id="auftragKundeName" placeholder="z.B. Herr René Alder">
                     </div>
-                    <div class="form-group">
+                    <div class="form-group" style="grid-column:span 2;">
                         <label>Telefon</label>
                         <input type="text" id="auftragKundeTel" placeholder="079 419 53 13">
                     </div>
-                    <div class="form-group" style="grid-column:1/-1;">
+                    <div class="form-group" style="grid-column:span 2;">
                         <label>E-Mail</label>
                         <input type="email" id="auftragKundeMail" placeholder="name@beispiel.ch">
                     </div>
-
-                    <div style="grid-column:1/-1; padding-top:8px; border-top:1px solid var(--border);">
-                        <h4 style="margin:0 0 12px 0; color:var(--primary);">Verantwortlicher</h4>
+                    <!-- Trennlinie Verantwortlicher -->
+                    <div style="grid-column:span 8; padding-top:4px; border-top:1px solid var(--border);">
+                        <h4 style="margin:0 0 4px 0; color:var(--primary); font-size:14px;">Verantwortlicher</h4>
                     </div>
-                    <div class="form-group" style="grid-column:1/-1;">
+                    <!-- Verantwortlicher(50%) | leer(50%) -->
+                    <div class="form-group" style="grid-column:span 4;">
                         <label>Verantwortlicher (FL, TKB, Dispo...)</label>
                         <select id="auftragVerantwortlicher">
                             <option value="">Bitte wählen...</option>
                         </select>
                     </div>
+                    <div style="grid-column:span 4;"></div>
 
-                    <div style="grid-column:1/-1; padding-top:8px; border-top:1px solid var(--border);">
-                        <h4 style="margin:0 0 4px 0; color:var(--primary);">Nicht befähigte ECs</h4>
-                        <p style="font-size:13px; color:var(--text-gray); margin:0 0 12px 0;">Welche ECs können diesen Auftrag <strong>nicht</strong> ausführen?</p>
-                        <div id="ecAusschlussContainer" style="display:flex; flex-wrap:wrap; gap:8px; padding:10px; border:1px solid var(--border); border-radius:8px; min-height:42px;">
-                            <!-- EC Checkboxes rendered by JS -->
+                    <div style="grid-column:span 8; padding-top:4px; border-top:1px solid var(--border);">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>Nicht befähigte ECs <span style="font-weight:400; color:var(--text-gray); font-size:12px;">– Welche ECs können diesen Auftrag nicht ausführen?</span></label>
+                            <div id="ecAusschlussDropdownWrapper" style="position:relative;">
+                                <button type="button" id="ecAusschlussBtn" onclick="toggleEcAusschlussDropdown(event)" style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:white; cursor:pointer; display:flex; align-items:center; justify-content:space-between; text-align:left;">
+                                    <span id="ecAusschlussLabel">Keine Ausschlüsse</span>
+                                    <span>▾</span>
+                                </button>
+                                <div id="ecAusschlussContainer" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:1000; background:white; border:1px solid var(--border); border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,0.12); max-height:260px; overflow-y:auto; margin-top:4px; padding:8px 0;">
+                                    <!-- EC Checkboxes rendered by JS -->
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -7359,7 +8753,126 @@ TECHNOLOGIE-STACK:
         </div>
     </div>
 
-    <!-- Papierkorb Modal -->
+    <!-- Dispo Dialog -->
+    <div id="dispoDialog" class="modal" style="display:none;">
+        <div class="modal-overlay" onclick="closeDispoDialog()"></div>
+        <div class="modal-content" style="max-width:600px; max-height:90vh; overflow-y:auto;">
+            <div class="modal-header">
+                <h2 id="dispoDialogTitle">Disposition</h2>
+                <button class="modal-close" onclick="closeDispoDialog()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px 16px;">
+
+                    <!-- Hinweis an Disponent (read-only) -->
+                    <div style="grid-column:span 4; background:#f3f4f6; border-radius:8px; padding:12px 14px;">
+                        <div style="font-size:12px; font-weight:600; color:var(--text-gray); margin-bottom:4px;">HINWEIS AN DISPONENT</div>
+                        <div id="dispoHinweis" style="font-size:14px; color:var(--text-dark); white-space:pre-wrap;">–</div>
+                    </div>
+
+                    <!-- EC Auswahl -->
+                    <div class="form-group" style="grid-column:span 2;">
+                        <label>Equipenchef *</label>
+                        <select id="dispoEcId" style="width:100%;">
+                            <option value="">Bitte wählen...</option>
+                        </select>
+                    </div>
+
+                    <!-- Datum -->
+                    <div class="form-group" style="grid-column:span 1;">
+                        <label>Einsatzdatum *</label>
+                        <input type="date" id="dispoDatum">
+                    </div>
+
+                    <!-- Status -->
+                    <div class="form-group" style="grid-column:span 1;">
+                        <label>Status</label>
+                        <select id="dispoStatus" style="width:100%;">
+                            <option value="KB">KB – Kommt Bescheid</option>
+                            <option value="AN">AN – Anrufen</option>
+                            <option value="RES">RES – Reserviert</option>
+                            <option value="PROV">PROV – Provisorisch</option>
+                            <option value="FIX">FIX – Fix verplant</option>
+                        </select>
+                    </div>
+
+                    <!-- Startzeit / Endzeit -->
+                    <div class="form-group" style="grid-column:span 2;">
+                        <label>Startzeit</label>
+                        <div style="display:flex; align-items:center; gap:4px;">
+                            <input type="number" id="dispoStartzeitH" min="5" max="22" placeholder="08" style="width:52px; text-align:center; padding:6px 4px;">
+                            <span style="font-weight:600; color:var(--text-gray);">:</span>
+                            <input type="number" id="dispoStartzeitM" min="0" max="45" step="15" placeholder="00" style="width:52px; text-align:center; padding:6px 4px;" onchange="this.value=Math.round(this.value/15)*15; if(this.value>45)this.value=45; if(this.value<0)this.value=0;">
+                        </div>
+                    </div>
+                    <div class="form-group" style="grid-column:span 2;">
+                        <label>Endzeit</label>
+                        <div style="display:flex; align-items:center; gap:4px;">
+                            <input type="number" id="dispoEndzeitH" min="5" max="22" placeholder="08" style="width:52px; text-align:center; padding:6px 4px;">
+                            <span style="font-weight:600; color:var(--text-gray);">:</span>
+                            <input type="number" id="dispoEndzeitM" min="0" max="45" step="15" placeholder="00" style="width:52px; text-align:center; padding:6px 4px;" onchange="this.value=Math.round(this.value/15)*15; if(this.value>45)this.value=45; if(this.value<0)this.value=0;">
+                        </div>
+                    </div>
+                    <!-- Infos an Equipenchef -->
+                    <div class="form-group" style="grid-column:span 4;">
+                        <label>Infos an Equipenchef</label>
+                        <textarea id="dispoInfosEc" rows="3" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:8px; font-size:14px; resize:vertical;"></textarea>
+                    </div>
+                </div>
+                <div class="modal-actions" style="margin-top:16px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeDispoDialog()">Abbrechen</button>
+                    <button type="button" class="btn btn-primary" onclick="saveDispoEinsatz()">Speichern</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tagesprogramm Bar-Edit Dialog -->
+    <div id="tpBarDialog" class="modal" style="display:none;">
+        <div class="modal-overlay" onclick="tpCloseBarDialog()"></div>
+        <div class="modal-content" style="max-width:500px;">
+            <div class="modal-header" style="padding:10px 16px;">
+                <h2 style="font-size:15px;margin:0;" id="tpBarDialogTitle">Einsatz bearbeiten</h2>
+                <button class="modal-close" onclick="tpCloseBarDialog()">✕</button>
+            </div>
+            <div id="tpBarDialogHeader" style="background:#e5e7eb;padding:7px 16px;font-size:11px;color:#4A5967;display:flex;gap:12px;flex-wrap:wrap;border-bottom:1px solid #d1d5db;"></div>
+            <div class="modal-body">
+                <div id="tpBarDialogInfo" style="background:#f3f4f6;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:var(--text-gray);"></div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;">
+                    <div class="form-group" style="grid-column:span 2;">
+                        <label>Equipenchef</label>
+                        <select id="tpBarEc" style="width:100%;"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Datum</label>
+                        <input type="date" id="tpBarDatum" style="width:100%;">
+                    </div>
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
+                            <input type="number" id="tpBarStartH" min="0" max="23" style="width:52px;text-align:center;padding:6px 4px;border:1px solid var(--border);border-radius:6px;">
+                            <span style="font-weight:600;color:var(--text-gray);">:</span>
+                            <input type="number" id="tpBarStartM" min="0" max="45" step="15" style="width:52px;text-align:center;padding:6px 4px;border:1px solid var(--border);border-radius:6px;">
+                            <span style="color:var(--text-gray);padding:0 4px;">–</span>
+                            <input type="number" id="tpBarEndH" min="0" max="23" style="width:52px;text-align:center;padding:6px 4px;border:1px solid var(--border);border-radius:6px;">
+                            <span style="font-weight:600;color:var(--text-gray);">:</span>
+                            <input type="number" id="tpBarEndM" min="0" max="45" step="15" style="width:52px;text-align:center;padding:6px 4px;border:1px solid var(--border);border-radius:6px;">
+                        </div>
+                    </div>
+                    <div class="form-group" style="grid-column:span 2;">
+                        <label>Infos an Equipenchef</label>
+                        <textarea id="tpBarInfos" rows="3" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:14px;resize:vertical;"></textarea>
+                    </div>
+                </div>
+                <div class="modal-actions" style="margin-top:16px;">
+                    <button class="btn btn-secondary" onclick="tpCloseBarDialog()">Abbrechen</button>
+                    <button class="btn btn-primary" onclick="tpSaveBarDialog()">Speichern</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+        <!-- Papierkorb Modal -->
     <div id="papierkorbModal" class="modal" style="display: none;">
         <div class="modal-overlay" onclick="closePapierkorb()"></div>
         <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
@@ -7398,7 +8911,7 @@ TECHNOLOGIE-STACK:
 
     <!-- Version Check -->
     <div id="versionInfo" style="position: fixed; bottom: 8px; right: 8px; font-size: 10px; color: #999; background: white; padding: 4px 8px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); z-index: 9999;">
-        v2026-02-20_22:00 (Aufträge-Modul, Dropdown Layout Neuschrieb)
+        v2026-02-22_20:30 (Tagesprogramm: Timezone Fix)
     </div>
 </body>
 </html>
